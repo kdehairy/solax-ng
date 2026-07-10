@@ -95,7 +95,7 @@ class ResponseParser:
         Return map of functions to be applied to each sensor value
         """
         for name, mapping in self.response_decoder.items():
-            (_, _, *processors) = mapping
+            _, _, *processors = mapping
             for processor in processors:
                 yield name, processor
 
