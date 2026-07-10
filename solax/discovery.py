@@ -13,12 +13,12 @@ __all__ = ("discover", "DiscoveryKeywords", "DiscoveryError")
 if sys.version_info >= (3, 10):
     from importlib.metadata import entry_points
 else:
-    from importlib_metadata import entry_points
+    from importlib_metadata import entry_points  # pragma: no cover
 
 if sys.version_info >= (3, 11):
     from typing import Unpack
 else:
-    from typing_extensions import Unpack
+    from typing_extensions import Unpack  # pragma: no cover
 
 # registry of inverters
 REGISTRY: Set[Type[Inverter]] = {
@@ -38,7 +38,7 @@ class DiscoveryKeywords(TypedDict, total=False):
 if sys.version_info >= (3, 9):
     _InverterTask = Task[Inverter]
 else:
-    _InverterTask = Task
+    _InverterTask = Task  # pragma: no cover
 
 
 class _DiscoveryHttpClient:
