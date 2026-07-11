@@ -35,7 +35,8 @@ def _permissiveness_scores():
     """
     Count, for each inverter class, how many fixture responses (belonging
     to any inverter) its schema accepts. A schema that accepts more
-    unrelated responses is more permissive than one that accepts fewer.
+    unrelated responses is less specific (more permissive) than one that
+    accepts fewer.
     """
     scores = defaultdict(int)
     for case in fixtures.INVERTERS_UNDER_TEST:
@@ -69,6 +70,25 @@ def test_response_matches_exactly_one_inverter_schema(case):
         f"expected only {case.inverter.__name__} to accept this response, "
         "but it also validated against (most to least permissive): "
         f"{[c.__name__ for c in _most_permissive_first(extra)]}"
+    )
+
+
+def test_registry_order_matches_specificity():
+    """
+    REGISTRY must be ordered least-to-most permissive so discover()'s
+    tie-break prefers the more specific/correct inverter. This is a
+    drift guard: if fixtures or schemas change such that the
+    fixture-computed ranking no longer matches REGISTRY's actual order,
+    update _SCHEMA_SPECIFICITY_ORDER in solax/discovery.py to match
+    (rerun `python -m tests.test_schema_ambiguity` and reverse it, or
+    use _most_permissive_first(REGISTRY) directly).
+    """
+    expected = list(reversed(_most_permissive_first(REGISTRY)))
+    expected_literal = ",\n".join(f'    "{c.__name__}"' for c in expected)
+    assert REGISTRY == tuple(expected), (
+        "solax.discovery._SCHEMA_SPECIFICITY_ORDER has drifted from the "
+        "fixture-computed permissiveness ranking; update it to:\n"
+        f"{expected_literal}"
     )
 
 
