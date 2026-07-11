@@ -45,6 +45,7 @@ _SCHEMA_SPECIFICITY_ORDER: Tuple[str, ...] = (
     "XHybrid",
     "X3HybridG4",
     "X1Smart",
+    "X1LiteLV",
     "X1HybridGen4",
     "X1G4Series",
     "X1",
@@ -52,7 +53,6 @@ _SCHEMA_SPECIFICITY_ORDER: Tuple[str, ...] = (
     "X3",
     "X1MiniV34",
     "X1Boost",
-    "X1LiteLV",
 )
 _SCHEMA_SPECIFICITY_RANK: Dict[str, int] = {
     name: rank for rank, name in enumerate(_SCHEMA_SPECIFICITY_ORDER)
