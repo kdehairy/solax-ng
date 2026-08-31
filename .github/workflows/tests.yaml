@@ -12,33 +12,30 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
       with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install .
-        pip install --upgrade flake8 pylint pytest pytest-cov pytest-asyncio pytest-httpserver black mypy isort
+        enable-cache: true
+    - name: Sync dependencies
+      run: uv sync --python ${{ matrix.python-version }}
     - name: Check code style with black
       run: |
-        black --check .
+        uv run black --check .
     - name: Check types with mypy
       run: |
-        mypy .
+        uv run mypy .
     - name: Check imports with isort
       run: |
-        isort --check-only --profile black .
+        uv run isort --check-only --profile black .
     - name: Lint with flake8
       run: |
-        flake8 --ignore=E501,E704 solax tests
+        uv run flake8 --ignore=E501,E704 src tests
     - name: Lint with pylint
       run: |
-        pylint -d 'C0111' solax tests
+        uv run pylint -d 'C0111' src tests
     - name: Test with pytest
       run: |
-        pytest --cov=solax --cov-branch --cov-report=term-missing .
+        uv run pytest --cov=solax --cov-branch --cov-report=term-missing .
         mv .coverage .coverage.${{ matrix.python-version }}
     - name: Upload coverage
       uses: actions/upload-artifact@v4

@@ -31,7 +31,7 @@ data = loop.run_until_complete(work())
 print(data)
 ```
 
-This will try all the inverter classes in turn until it finds the first one that works with your installation. You can see the list of inverter implementation classes in the entry points configured in [setup.py](setup.py).
+This will try all the inverter classes in turn until it finds the first one that works with your installation. You can see the list of inverter implementation classes in the entry points configured in [pyproject.toml](pyproject.toml).
 
 If you want to bypass the inverter discovery code and use a specific inverter class, you can invoke `discover` specifying directly the class. In this example, the X1 Hybrid Gen4 implementation is used:
 
