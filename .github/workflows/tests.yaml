@@ -35,7 +35,7 @@ jobs:
         uv run pylint -d 'C0111' src tests
     - name: Test with pytest
       run: |
-        uv run pytest --cov=solax --cov-branch --cov-report=term-missing .
+        uv run pytest --cov=solaxng --cov-branch --cov-report=term-missing .
         mv .coverage .coverage.${{ matrix.python-version }}
     - name: Upload coverage
       uses: actions/upload-artifact@v4

@@ -13,8 +13,8 @@ import pytest
 import voluptuous as vol
 from voluptuous import Invalid, MultipleInvalid
 
-from solax.discovery import REGISTRY
-from solax.response_parser import GENERIC_RESPONSE_SCHEMA
+from solaxng.discovery import REGISTRY
+from solaxng.response_parser import GENERIC_RESPONSE_SCHEMA
 from tests import fixtures
 
 
@@ -84,14 +84,14 @@ def test_registry_order_matches_specificity():
     tie-break prefers the more specific/correct inverter. This is a
     drift guard: if fixtures or schemas change such that the
     fixture-computed ranking no longer matches REGISTRY's actual order,
-    update _SCHEMA_SPECIFICITY_ORDER in solax/discovery.py to match
+    update _SCHEMA_SPECIFICITY_ORDER in solaxng/discovery.py to match
     (rerun `python -m tests.test_schema_ambiguity` and reverse it, or
     use _most_permissive_first(REGISTRY) directly).
     """
     expected = list(reversed(_most_permissive_first(REGISTRY)))
     expected_literal = ",\n".join(f'    "{c.__name__}"' for c in expected)
     assert REGISTRY == tuple(expected), (
-        "solax.discovery._SCHEMA_SPECIFICITY_ORDER has drifted from the "
+        "solaxng.discovery._SCHEMA_SPECIFICITY_ORDER has drifted from the "
         "fixture-computed permissiveness ranking; update it to:\n"
         f"{expected_literal}"
     )

@@ -4,10 +4,10 @@ from typing import Any, Dict, Optional, Tuple
 import aiohttp
 import voluptuous as vol
 
-from solax import utils
-from solax.inverter_http_client import InverterHttpClient, Method
-from solax.response_parser import InverterResponse, ResponseDecoder, ResponseParser
-from solax.units import Measurement, Units
+from solaxng import utils
+from solaxng.inverter_http_client import InverterHttpClient, Method
+from solaxng.response_parser import InverterResponse, ResponseDecoder, ResponseParser
+from solaxng.units import Measurement, Units
 
 
 class InverterError(Exception):

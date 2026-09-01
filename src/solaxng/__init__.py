@@ -3,9 +3,9 @@
 import asyncio
 import logging
 
-from solax.discovery import discover
-from solax.inverter import Inverter, InverterResponse
-from solax.inverter_http_client import REQUEST_TIMEOUT
+from solaxng.discovery import discover
+from solaxng.inverter import Inverter, InverterResponse
+from solaxng.inverter_http_client import REQUEST_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 

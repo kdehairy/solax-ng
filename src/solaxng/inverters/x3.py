@@ -2,9 +2,9 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solax.inverter import Inverter
-from solax.units import DailyTotal, Total, Units
-from solax.utils import startswith
+from solaxng.inverter import Inverter
+from solaxng.units import DailyTotal, Total, Units
+from solaxng.utils import startswith
 
 
 class X3(Inverter):

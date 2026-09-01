@@ -1,5 +1,5 @@
 [project]
-name = "solax"
+name = "solax-ng"
 version = "3.2.4"
 description = "Solax inverter API client"
 readme = "README.md"
@@ -21,25 +21,25 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kdehairy/solax"
+Homepage = "https://github.com/kdehairy/solax-ng"
 
-[project.entry-points."solax.inverter"]
-qvolt_hyb_g3_3p = "solax.inverters.qvolt_hyb_g3_3p:QVOLTHYBG33P"
-x1 = "solax.inverters.x1:X1"
-x1_boost = "solax.inverters.x1_boost:X1Boost"
-x1_g4_series = "solax.inverters.x1_g4_series:X1G4Series"
-x1_hybrid_gen4 = "solax.inverters.x1_hybrid_gen4:X1HybridGen4"
-x1_mini = "solax.inverters.x1_mini:X1Mini"
-x1_mini_v34 = "solax.inverters.x1_mini_v34:X1MiniV34"
-x1_smart = "solax.inverters.x1_smart:X1Smart"
-x1_lite_lv = "solax.inverters.x1_lite_lv:X1LiteLV"
-x3 = "solax.inverters.x3:X3"
-x3_hybrid_g4 = "solax.inverters.x3_hybrid_g4:X3HybridG4"
-x3_ultra = "solax.inverters.x3_ultra:X3Ultra"
-x3_mic_pro_g2 = "solax.inverters.x3_mic_pro_g2:X3MicProG2"
-x3_v34 = "solax.inverters.x3_v34:X3V34"
-x_hybrid = "solax.inverters.x_hybrid:XHybrid"
-x3_evc = "solax.inverters.x3_evc:X3EVC"
+[project.entry-points."solaxng.inverter"]
+qvolt_hyb_g3_3p = "solaxng.inverters.qvolt_hyb_g3_3p:QVOLTHYBG33P"
+x1 = "solaxng.inverters.x1:X1"
+x1_boost = "solaxng.inverters.x1_boost:X1Boost"
+x1_g4_series = "solaxng.inverters.x1_g4_series:X1G4Series"
+x1_hybrid_gen4 = "solaxng.inverters.x1_hybrid_gen4:X1HybridGen4"
+x1_mini = "solaxng.inverters.x1_mini:X1Mini"
+x1_mini_v34 = "solaxng.inverters.x1_mini_v34:X1MiniV34"
+x1_smart = "solaxng.inverters.x1_smart:X1Smart"
+x1_lite_lv = "solaxng.inverters.x1_lite_lv:X1LiteLV"
+x3 = "solaxng.inverters.x3:X3"
+x3_hybrid_g4 = "solaxng.inverters.x3_hybrid_g4:X3HybridG4"
+x3_ultra = "solaxng.inverters.x3_ultra:X3Ultra"
+x3_mic_pro_g2 = "solaxng.inverters.x3_mic_pro_g2:X3MicProG2"
+x3_v34 = "solaxng.inverters.x3_v34:X3V34"
+x_hybrid = "solaxng.inverters.x_hybrid:XHybrid"
+x3_evc = "solaxng.inverters.x3_evc:X3EVC"
 
 [dependency-groups]
 dev = [
@@ -53,6 +53,9 @@ dev = [
     "pytest-asyncio",
     "pytest-httpserver",
 ]
+
+[tool.uv.build-backend]
+module-name = "solaxng"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

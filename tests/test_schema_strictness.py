@@ -13,7 +13,7 @@ whether responses are currently ambiguous (see test_schema_ambiguity.py):
 import pytest
 import voluptuous as vol
 
-from solax.discovery import REGISTRY
+from solaxng.discovery import REGISTRY
 
 
 def _iter_length_validators(node):

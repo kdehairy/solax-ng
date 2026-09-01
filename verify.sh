@@ -21,4 +21,4 @@ echo "Running pylint..."
 uv run pylint -d 'C0111' src tests
 
 echo "Running pytest..."
-uv run pytest --cov=solax --cov-fail-under=100 --cov-branch --cov-report=term-missing .
+uv run pytest --cov=solaxng --cov-fail-under=100 --cov-branch --cov-report=term-missing .

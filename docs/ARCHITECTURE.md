@@ -1,12 +1,12 @@
 # Architecture
 
-This document describes how the `solax` library is put together: its
+This document describes how the `solaxng` library is put together: its
 responsibilities, the main components, how data flows from an inverter's HTTP
 endpoint to a Python object, and how new inverter models are added.
 
 ## Purpose
 
-`solax` talks to the local real-time-data HTTP endpoint exposed by Solax
+`solaxng` talks to the local real-time-data HTTP endpoint exposed by Solax
 solar inverters (and rebadged/compatible models) and turns the raw JSON
 payload into a typed, unit-aware `InverterResponse`. Because Solax does not
 publish a stable protocol or a way to identify which inverter model is
@@ -16,7 +16,7 @@ right one by trying them concurrently against the target host.
 ## Component map
 
 ```
-src/solax/
+src/solaxng/
 ├── __init__.py            RealTimeAPI facade + retry loop
 ├── discovery.py           Concurrent probing across the inverter registry
 ├── inverter.py            Inverter base class (schema, decoder, lifecycle)
@@ -27,7 +27,7 @@ src/solax/
 └── inverters/                One module per supported inverter model
 ```
 
-Each inverter model is a plugin registered via a `solax.inverter` entry point
+Each inverter model is a plugin registered via a `solaxng.inverter` entry point
 in `pyproject.toml`, not a hardcoded list — `discovery.py` builds its registry
 by reading those entry points at import time. This is what lets a caller pass
 `inverters=[...]` to `discover()` and bypass the plugin lookup entirely (see
@@ -128,7 +128,7 @@ registry:
 5. Failures (network errors, schema mismatches) are collected and only
    surfaced (as a `DiscoveryError`) if *no* model matched at all.
 
-`solax.real_time_api()` / `RealTimeAPI` in `__init__.py` is a thin
+`solaxng.real_time_api()` / `RealTimeAPI` in `__init__.py` is a thin
 convenience wrapper: it runs `discover()` once with `FIRST_COMPLETED`, then
 wraps the resulting `Inverter` with `rt_request()`, which retries on
 `asyncio.TimeoutError` with exponential backoff (`5, 15, 35, ...` seconds)
@@ -152,12 +152,12 @@ to shadow a sibling model.
 
 ## Extension point: adding a new inverter
 
-1. Add `solax/inverters/<name>.py` with a class subclassing `Inverter`
+1. Add `solaxng/inverters/<name>.py` with a class subclassing `Inverter`
    that defines `_schema`, `response_decoder()`, and
    `inverter_serial_number_getter()`. Override `build_all_variants()` only
    if the model doesn't support both query/body variants.
-2. Export it from `solax/inverters/__init__.py`.
-3. Register it as a `solax.inverter` entry point in `pyproject.toml`.
+2. Export it from `solaxng/inverters/__init__.py`.
+3. Register it as a `solaxng.inverter` entry point in `pyproject.toml`.
 4. Add a real (or sanitized) sample response and its expected decoded
    values under `tests/samples/`, and a case in `tests/fixtures.py`'s
    `INVERTERS_UNDER_TEST` — this is what feeds both `test_solax.py`

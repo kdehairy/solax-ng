@@ -2,7 +2,7 @@ import struct
 
 import pytest
 
-from solax import utils
+from solaxng import utils
 
 
 @pytest.mark.parametrize(

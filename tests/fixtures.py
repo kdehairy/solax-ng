@@ -3,7 +3,7 @@ from copy import copy
 
 import pytest
 
-import solax.inverters as inverter
+import solaxng.inverters as inverter
 from tests.samples.expected_values import (
     QVOLTHYBG33P_VALUES,
     X1_BOOST_VALUES,

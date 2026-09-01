@@ -2,9 +2,9 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solax.inverter import Inverter
-from solax.units import Total, Units
-from solax.utils import div10, div100, pack_u16, to_signed, twoway_div10
+from solaxng.inverter import Inverter
+from solaxng.units import Total, Units
+from solaxng.utils import div10, div100, pack_u16, to_signed, twoway_div10
 
 
 class X1LiteLV(Inverter):

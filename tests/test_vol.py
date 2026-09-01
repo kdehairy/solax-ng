@@ -1,7 +1,7 @@
 import pytest
 from voluptuous import Invalid
 
-from solax.utils import contains_none_zero_value, startswith
+from solaxng.utils import contains_none_zero_value, startswith
 
 
 def test_does_start_with():

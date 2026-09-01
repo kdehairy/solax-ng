@@ -2,9 +2,9 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solax.inverter import Inverter
-from solax.units import DailyTotal, Total, Units
-from solax.utils import div10, div100, pack_u16, to_signed
+from solaxng.inverter import Inverter
+from solaxng.units import DailyTotal, Total, Units
+from solaxng.utils import div10, div100, pack_u16, to_signed
 
 
 class X1Boost(Inverter):

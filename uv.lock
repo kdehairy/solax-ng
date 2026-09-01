@@ -3379,7 +3379,7 @@ wheels = [
 ]
 
 [[package]]
-name = "solax"
+name = "solax-ng"
 version = "3.2.4"
 source = { editable = "." }
 dependencies = [

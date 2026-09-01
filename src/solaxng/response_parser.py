@@ -8,8 +8,8 @@ import voluptuous as vol
 from voluptuous import Invalid, MultipleInvalid
 from voluptuous.humanize import humanize_error
 
-from solax.units import SensorUnit
-from solax.utils import PackerBuilderResult, contains_none_zero_value
+from solaxng.units import SensorUnit
+from solaxng.utils import PackerBuilderResult, contains_none_zero_value
 
 __all__ = ("ResponseParser", "InverterResponse", "ResponseDecoder")
 

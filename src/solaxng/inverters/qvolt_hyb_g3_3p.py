@@ -2,9 +2,16 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solax.inverter import Inverter, InverterHttpClient
-from solax.units import DailyTotal, Measurement, Total, Units
-from solax.utils import div10, div100, pack_u16, to_signed, twoway_div10, twoway_div100
+from solaxng.inverter import Inverter, InverterHttpClient
+from solaxng.units import DailyTotal, Measurement, Total, Units
+from solaxng.utils import (
+    div10,
+    div100,
+    pack_u16,
+    to_signed,
+    twoway_div10,
+    twoway_div100,
+)
 
 
 class QVOLTHYBG33P(Inverter):

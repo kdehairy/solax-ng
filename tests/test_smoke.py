@@ -1,9 +1,9 @@
 import pytest
 
-import solax
-from solax.discovery import REGISTRY
-from solax.inverter import Inverter, InverterError
-from solax.units import Measurement
+import solaxng
+from solaxng.discovery import REGISTRY
+from solaxng.inverter import Inverter, InverterError
+from solaxng.units import Measurement
 from tests import fixtures
 
 
@@ -22,7 +22,7 @@ async def build_right_variant(inverter, conn) -> Inverter:
 async def test_smoke(inverters_fixture):
     conn, inverter_class, values = inverters_fixture
     inv = await build_right_variant(inverter_class, conn)
-    rt_api = solax.RealTimeAPI(inv)
+    rt_api = solaxng.RealTimeAPI(inv)
     parsed = await rt_api.get_data()
 
     msg = "data size should match expected values"
@@ -79,5 +79,5 @@ async def test_smoke_zero(inverters_fixture_all_zero):
     # msg = 'all zero values should be discarded'
     with pytest.raises(InverterError):
         inv = await build_right_variant(inverter_class, conn)
-        rt_api = solax.RealTimeAPI(inv)
+        rt_api = solaxng.RealTimeAPI(inv)
         await rt_api.get_data()

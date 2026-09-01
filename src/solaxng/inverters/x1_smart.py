@@ -2,24 +2,21 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solax.inverter import Inverter
-from solax.units import DailyTotal, Total, Units
-from solax.utils import div10, div100
+from solaxng.inverter import Inverter
+from solaxng.units import DailyTotal, Total, Units
+from solaxng.utils import div10, div100, to_signed
 
 
-class X1MiniV34(Inverter):
+class X1Smart(Inverter):
     """
-    X1-Boost-Air-Mini with Wifi Pocket v2.034.06
-    SolarX disabled lan access with this custom
-    firmware you can access te Wifi Pocket from your internal lan:
-    https://blog.chrisoft.io/2021/02/14/
-    firmwares-modificados-para-solax-pocket-wifi-v2/
+    X1-Smart with Pocket WiFi v2.033.20
+    Includes X-Forwarded-For for direct LAN API access
     """
 
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {
-            vol.Required("type", "type"): vol.All(int, 4),
+            vol.Required("type", "type"): vol.All(int, 8),
             vol.Required(
                 "sn",
             ): str,
@@ -27,16 +24,10 @@ class X1MiniV34(Inverter):
             vol.Required("data"): vol.Schema(
                 vol.All(
                     [vol.Coerce(float)],
-                    vol.Any(
-                        vol.Length(min=69, max=69),
-                        vol.Length(min=100, max=100),
-                        vol.Length(min=200, max=200),
-                    ),
+                    vol.Length(min=100, max=200),
                 )
             ),
-            vol.Required("information"): vol.Schema(
-                vol.Any(vol.Length(min=9, max=9), vol.Length(min=10, max=10))
-            ),
+            vol.Required("information"): vol.Schema(vol.All(vol.Length(min=8, max=10))),
         },
         extra=vol.REMOVE_EXTRA,
     )
@@ -56,14 +47,24 @@ class X1MiniV34(Inverter):
             "Grid Frequency": (9, Units.HZ, div100),
             "Total Energy": (11, Total(Units.KWH), div10),
             "Today's Energy": (13, DailyTotal(Units.KWH), div10),
-            "Total Feed-in Energy": (41, Total(Units.KWH), div10),
-            "Total Consumption": (42, Total(Units.KWH), div10),
-            "Power Now": (43, Units.W, div10),
-            "Inverter Temperature": (55, Units.C),
+            "Inverter Temperature": (39, Units.C),
+            "Exported Power": (48, Units.W, to_signed),
+            "Total Feed-in Energy": (50, Total(Units.KWH), div100),
+            "Total Consumption": (52, Total(Units.KWH), div100),
         }
-
-    # pylint: enable=duplicate-code
 
     @classmethod
     def inverter_serial_number_getter(cls, response: Dict[str, Any]) -> Optional[str]:
         return response["information"][2]
+
+    @classmethod
+    def build_all_variants(cls, host, port, pwd=""):
+        versions = [
+            cls._build(host, port, pwd, True),
+            cls._build(host, port, pwd, False),
+        ]
+        for inverter in versions:
+            inverter.http_client = inverter.http_client.with_headers(
+                {"X-Forwarded-For": "5.8.8.8"}
+            )
+        return versions

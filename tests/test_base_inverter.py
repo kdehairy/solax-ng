@@ -1,7 +1,7 @@
 import pytest
 
-from solax.discovery import REGISTRY
-from solax.inverter import Inverter
+from solaxng.discovery import REGISTRY
+from solaxng.inverter import Inverter
 
 
 def test_all_registered_inverters_inherit_from_base():

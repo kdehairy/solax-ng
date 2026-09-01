@@ -5,8 +5,8 @@ from asyncio import Future, Task
 from collections import defaultdict
 from typing import Dict, Literal, Sequence, Set, Tuple, Type, TypedDict, Union, cast
 
-from solax.inverter import Inverter
-from solax.inverter_http_client import InverterHttpClient
+from solaxng.inverter import Inverter
+from solaxng.inverter_http_client import InverterHttpClient
 
 __all__ = ("discover", "DiscoveryKeywords", "DiscoveryError")
 
@@ -70,7 +70,7 @@ REGISTRY: Tuple[Type[Inverter], ...] = tuple(
     sorted(
         dict.fromkeys(
             loaded
-            for ep in entry_points(group="solax.inverter")
+            for ep in entry_points(group="solaxng.inverter")
             if issubclass(loaded := ep.load(), Inverter)
         ),
         key=_specificity_rank,
