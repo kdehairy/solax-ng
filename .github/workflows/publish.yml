@@ -7,19 +7,12 @@ on:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@master
   deploy:
-    needs: release
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Install uv
       uses: astral-sh/setup-uv@v6
     - name: Build
