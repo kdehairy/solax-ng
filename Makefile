@@ -15,6 +15,19 @@ verify: init
 test:
 	uv run pytest --cov=solaxng --cov-fail-under=100 --cov-branch --cov-report=term-missing .
 
+BUMP ?= patch
+
+.PHONY: release
+release:
+	@case "$(BUMP)" in \
+		patch|minor|major) ;; \
+		*) echo "Usage: make release BUMP=patch|minor|major" >&2; exit 1 ;; \
+	esac
+	uv version --bump $(BUMP)
+	git add pyproject.toml uv.lock
+	git commit -m "chore: bump version to $$(uv version --short)"
+	git tag "v$$(uv version --short)"
+
 .PHONY: build
 build:
 	rm -rf dist
