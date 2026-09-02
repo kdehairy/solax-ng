@@ -76,7 +76,9 @@ async def test_discovery_cancelled_error_after_staggering(
     inverters.add(DelayedX1Boost)
 
     task = asyncio.create_task(
-        solaxng.discover(*conn, inverters=inverters, return_when=asyncio.FIRST_EXCEPTION)
+        solaxng.discover(
+            *conn, inverters=inverters, return_when=asyncio.FIRST_EXCEPTION
+        )
     )
     await asyncio.sleep(7)
     task.cancel()
@@ -111,7 +113,7 @@ async def test_discovery_not_first_completed_after_staggering(
     inverters = await solaxng.discover(
         *conn,
         inverters=[DelayedX1Boost, DelayedFailedX1Boost],
-        return_when=asyncio.FIRST_EXCEPTION
+        return_when=asyncio.FIRST_EXCEPTION,
     )
     assert DelayedX1Boost in {type(inverter) for inverter in inverters}
 

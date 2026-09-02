@@ -24,6 +24,6 @@ jobs:
       uses: astral-sh/setup-uv@v6
     - name: Build
       run: |
-        uv build
+        make build
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
