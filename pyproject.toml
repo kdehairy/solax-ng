@@ -1,6 +1,6 @@
 [project]
 name = "solax-ng"
-version = "3.2.4"
+version = "3.2.5"
 description = "Solax inverter API client"
 readme = "README.md"
 license = "MIT"
