@@ -13,6 +13,12 @@ jobs:
       id-token: write
     steps:
     - uses: actions/checkout@v4
+    - name: Verify tag signature
+      env:
+        GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+      run: |
+        echo "$GPG_PUBLIC_KEY" | gpg --import
+        git tag -v "$GITHUB_REF_NAME"
     - name: Install uv
       uses: astral-sh/setup-uv@v6
     - name: Build
