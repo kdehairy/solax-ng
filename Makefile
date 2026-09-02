@@ -26,7 +26,7 @@ release:
 	uv version --bump $(BUMP)
 	git add pyproject.toml uv.lock
 	git commit -m "chore: bump version to $$(uv version --short)"
-	git tag -s "v$$(uv version --short)" -m "v$$(uv version --short)"
+	git tag "v$$(uv version --short)"
 
 .PHONY: build
 build:
