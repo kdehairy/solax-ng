@@ -56,8 +56,10 @@ def _most_permissive_first(inverter_classes):
 
 
 @pytest.mark.xfail(
-    reason="some inverter schemas are still too permissive; tightening them "
-    "is tracked separately and shouldn't block CI in the meantime",
+    reason="some collisions are fixable by tightening a schema (tracked "
+    "separately, shouldn't block CI) but others are inherent: these "
+    "schemas are reverse-engineered from observed payloads, and some "
+    "models are genuinely indistinguishable from a single response",
     strict=False,
 )
 @pytest.mark.parametrize(
@@ -75,25 +77,6 @@ def test_response_matches_exactly_one_inverter_schema(case):
         f"expected only {case.inverter.__name__} to accept this response, "
         "but it also validated against (most to least permissive): "
         f"{[c.__name__ for c in _most_permissive_first(extra)]}"
-    )
-
-
-def test_registry_order_matches_specificity():
-    """
-    REGISTRY must be ordered least-to-most permissive so discover()'s
-    tie-break prefers the more specific/correct inverter. This is a
-    drift guard: if fixtures or schemas change such that the
-    fixture-computed ranking no longer matches REGISTRY's actual order,
-    update _SCHEMA_SPECIFICITY_ORDER in solaxng/discovery.py to match
-    (rerun `python -m tests.test_schema_ambiguity` and reverse it, or
-    use _most_permissive_first(REGISTRY) directly).
-    """
-    expected = list(reversed(_most_permissive_first(REGISTRY)))
-    expected_literal = ",\n".join(f'    "{c.__name__}"' for c in expected)
-    assert REGISTRY == tuple(expected), (
-        "solaxng.discovery._SCHEMA_SPECIFICITY_ORDER has drifted from the "
-        "fixture-computed permissiveness ranking; update it to:\n"
-        f"{expected_literal}"
     )
 
 

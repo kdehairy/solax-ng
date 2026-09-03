@@ -24,7 +24,7 @@ class DelayedFailedX1Boost(X1Boost):
 @pytest.mark.asyncio
 async def test_discovery(inverters_fixture):
     conn, inverter_class, _ = inverters_fixture
-    inverters = await solaxng.discover(*conn, return_when=asyncio.ALL_COMPLETED)
+    inverters = await solaxng.discover(*conn)
     assert inverter_class in {type(inverter) for inverter in inverters}
 
     for inverter in inverters:
@@ -35,13 +35,18 @@ async def test_discovery(inverters_fixture):
 
 
 @pytest.mark.asyncio
-async def test_real_time_api(inverters_fixture):
+async def test_discovered_inverter_wraps_in_real_time_api(inverters_fixture):
     conn, inverter_class, _ = inverters_fixture
 
     if inverter_class is not X1Boost:
         pytest.skip()
 
-    rt_api = await solaxng.real_time_api(*conn)
+    # discover() reports every model whose schema matched, which is not
+    # always one; choosing among them is the caller's job, so pick the
+    # wanted class deliberately instead of assuming the set is a single.
+    inverters = await solaxng.discover(*conn)
+    chosen = next(i for i in inverters if isinstance(i, inverter_class))
+    rt_api = solaxng.RealTimeAPI(chosen)
     assert rt_api.inverter.__class__ is inverter_class
 
 
@@ -54,9 +59,7 @@ async def test_discovery_cancelled_error_while_staggering(
     if inverter_class is not X1Boost:
         pytest.skip()
 
-    task = asyncio.create_task(
-        solaxng.discover(*conn, return_when=asyncio.FIRST_EXCEPTION)
-    )
+    task = asyncio.create_task(solaxng.discover(*conn))
     await asyncio.sleep(1)
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -75,11 +78,7 @@ async def test_discovery_cancelled_error_after_staggering(
     inverters = set(REGISTRY)
     inverters.add(DelayedX1Boost)
 
-    task = asyncio.create_task(
-        solaxng.discover(
-            *conn, inverters=inverters, return_when=asyncio.FIRST_EXCEPTION
-        )
-    )
+    task = asyncio.create_task(solaxng.discover(*conn, inverters=inverters))
     await asyncio.sleep(7)
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -87,22 +86,7 @@ async def test_discovery_cancelled_error_after_staggering(
 
 
 @pytest.mark.asyncio
-async def test_discovery_first_completed_after_staggering(
-    inverters_fixture,
-):
-    conn, inverter_class, _ = inverters_fixture
-
-    if inverter_class is not X1Boost:
-        pytest.skip()
-
-    inverter = await solaxng.discover(
-        *conn, inverters=[DelayedX1Boost], return_when=asyncio.FIRST_COMPLETED
-    )
-    assert inverter.__class__ is DelayedX1Boost
-
-
-@pytest.mark.asyncio
-async def test_discovery_not_first_completed_after_staggering(
+async def test_discovery_includes_slow_match_despite_a_faster_failure(
     inverters_fixture,
 ):
     conn, inverter_class, _ = inverters_fixture
@@ -113,7 +97,6 @@ async def test_discovery_not_first_completed_after_staggering(
     inverters = await solaxng.discover(
         *conn,
         inverters=[DelayedX1Boost, DelayedFailedX1Boost],
-        return_when=asyncio.FIRST_EXCEPTION,
     )
     assert DelayedX1Boost in {type(inverter) for inverter in inverters}
 
@@ -121,19 +104,19 @@ async def test_discovery_not_first_completed_after_staggering(
 @pytest.mark.asyncio
 async def test_discovery_no_host():
     with pytest.raises(DiscoveryError):
-        await solaxng.real_time_api("localhost", 2)
+        await solaxng.discover("localhost", 2)
 
 
 @pytest.mark.asyncio
 async def test_discovery_no_host_with_pwd():
     with pytest.raises(DiscoveryError):
-        await solaxng.real_time_api("localhost", 2, "pwd")
+        await solaxng.discover("localhost", 2, "pwd")
 
 
 @pytest.mark.asyncio
 async def test_discovery_unknown_webserver(simple_http_fixture):
     with pytest.raises(DiscoveryError):
-        await solaxng.real_time_api(*simple_http_fixture)
+        await solaxng.discover(*simple_http_fixture)
 
 
 @pytest.mark.asyncio
