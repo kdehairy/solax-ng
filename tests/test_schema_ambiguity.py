@@ -1,5 +1,20 @@
 """
-Checks that no two registered inverters accept the same response.
+Surfaces responses that more than one registered inverter schema accepts.
+
+An ambiguous response is not automatically a bug to be fixed. These
+schemas are reverse-engineered from observed payloads -- Solax publishes
+neither a protocol spec nor a model-identifying field -- so some models
+are genuinely indistinguishable from a single response, and no amount of
+schema tightening changes that. discover() reflects this by returning
+every model that matched and letting the caller resolve it.
+
+What this module enforces is that ambiguity stays *documented*:
+collisions we've concluded are inherent go in KNOWN_INHERENT_COLLISIONS,
+and any collision outside that list fails, since an undocumented one is
+most likely a schema that drifted too permissive (see
+test_schema_strictness.py for the structural invariants that prevent
+that). test_no_stale_known_collisions guards the other direction, so a
+collision that later becomes resolvable doesn't linger on the list.
 
 Also runnable standalone to print inverter schemas ranked from most to
 least permissive:
@@ -13,9 +28,23 @@ import pytest
 import voluptuous as vol
 from voluptuous import Invalid, MultipleInvalid
 
+import solaxng.inverters as inverter
 from solaxng.discovery import REGISTRY
 from solaxng.response_parser import GENERIC_RESPONSE_SCHEMA
 from tests import fixtures
+
+# Sets of inverter models whose schemas accept each other's responses and
+# that we've concluded cannot be told apart from a single payload. Each
+# entry is the *complete* match set a response produces. Adding an entry
+# is a decision that the collision is inherent rather than a
+# too-permissive schema -- prefer tightening the schema first; use
+# `python -m tests.test_schema_ambiguity` to see which side is permissive.
+KNOWN_INHERENT_COLLISIONS = frozenset(
+    {
+        frozenset({inverter.X1Boost, inverter.X1MiniV34}),
+        frozenset({inverter.QVOLTHYBG33P, inverter.X3HybridG4}),
+    }
+)
 
 
 def _matching_inverters(response):
@@ -55,13 +84,15 @@ def _most_permissive_first(inverter_classes):
     )
 
 
-@pytest.mark.xfail(
-    reason="some collisions are fixable by tightening a schema (tracked "
-    "separately, shouldn't block CI) but others are inherent: these "
-    "schemas are reverse-engineered from observed payloads, and some "
-    "models are genuinely indistinguishable from a single response",
-    strict=False,
-)
+def _observed_collisions():
+    return {
+        frozenset(matches)
+        for case in fixtures.INVERTERS_UNDER_TEST
+        for matches in [_matching_inverters(case.response)]
+        if len(matches) > 1
+    }
+
+
 @pytest.mark.parametrize(
     "case",
     fixtures.INVERTERS_UNDER_TEST,
@@ -70,13 +101,36 @@ def _most_permissive_first(inverter_classes):
         for i, case in enumerate(fixtures.INVERTERS_UNDER_TEST)
     ],
 )
-def test_response_matches_exactly_one_inverter_schema(case):
+def test_response_is_unambiguous_or_a_known_collision(case):
     matches = _matching_inverters(case.response)
-    extra = matches - {case.inverter}
-    assert matches == {case.inverter}, (
-        f"expected only {case.inverter.__name__} to accept this response, "
-        "but it also validated against (most to least permissive): "
-        f"{[c.__name__ for c in _most_permissive_first(extra)]}"
+    if matches == {case.inverter}:
+        return
+
+    names = sorted(c.__name__ for c in matches)
+    literal = ", ".join(f"inverter.{name}" for name in names)
+    assert frozenset(matches) in KNOWN_INHERENT_COLLISIONS, (
+        f"{case.inverter.__name__}'s response also validated against "
+        f"{[c.__name__ for c in _most_permissive_first(matches - {case.inverter})]} "
+        "(most to least permissive), and this collision isn't documented. "
+        "Tighten the permissive schema -- see test_schema_strictness.py -- "
+        "or, if these models genuinely cannot be told apart from one "
+        f"response, record it in KNOWN_INHERENT_COLLISIONS as "
+        f"frozenset({{{literal}}})"
+    )
+
+
+def test_no_stale_known_collisions():
+    """
+    Every documented collision must still be observable. If a schema gets
+    tightened enough to resolve one, its entry has to go, so the list
+    stays an accurate record of what's actually indistinguishable rather
+    than accumulating collisions nothing produces anymore.
+    """
+    stale = KNOWN_INHERENT_COLLISIONS - _observed_collisions()
+    assert not stale, (
+        "these collisions no longer occur in any fixture; remove them "
+        "from KNOWN_INHERENT_COLLISIONS: "
+        f"{[sorted(c.__name__ for c in entry) for entry in stale]}"
     )
 
 
