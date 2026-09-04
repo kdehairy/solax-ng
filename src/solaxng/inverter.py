@@ -1,11 +1,11 @@
 from abc import abstractmethod
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 import voluptuous as vol
 
-from solaxng import utils
-from solaxng.inverter_http_client import InverterHttpClient, Method
+from solaxng.endpoints import POST_BODY, POST_QUERY, EndpointConfig
+from solaxng.inverter_http_client import InverterHttpClient
 from solaxng.response_parser import InverterResponse, ResponseDecoder, ResponseParser
 from solaxng.units import Measurement, Units
 
@@ -28,6 +28,8 @@ class Inverter:
     # pylint: enable=C0301
     _schema = vol.Schema({})  # type: vol.Schema
 
+    endpoints: Tuple[EndpointConfig, ...] = (POST_QUERY, POST_BODY)
+
     def __init__(self, http_client: InverterHttpClient):
         self.manufacturer = "Solax"
         self.http_client = http_client
@@ -44,23 +46,8 @@ class Inverter:
         )
 
     @classmethod
-    def _build(cls, host, port, pwd="", params_in_query=True):
-        url = utils.to_url(host, port)
-        http_client = InverterHttpClient(url=url, method=Method.POST, pwd=pwd)
-        if params_in_query:
-            http_client = http_client.with_default_query()
-        else:
-            http_client = http_client.with_default_data()
-
-        return cls(http_client)
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = {
-            cls._build(host, port, pwd, True),
-            cls._build(host, port, pwd, False),
-        }
-        return versions
+    def build_all_variants(cls, host, port, pwd="") -> List["Inverter"]:
+        return [cls(endpoint.build(host, port, pwd)) for endpoint in cls.endpoints]
 
     async def get_data(self) -> InverterResponse:
         try:

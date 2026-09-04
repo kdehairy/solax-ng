@@ -26,11 +26,6 @@ class X1LiteLV(Inverter):
     )
 
     @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = [cls._build(host, port, pwd), cls._build(host, port, pwd, False)]
-        return versions
-
-    @classmethod
     def response_decoder(cls):
         """
         :return:

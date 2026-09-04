@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
+from solaxng.endpoints import POST_BODY_XFF, POST_QUERY_XFF
 from solaxng.inverter import Inverter
 from solaxng.units import DailyTotal, Total, Units
 from solaxng.utils import div10, div100, pack_u16, to_signed
@@ -16,6 +17,8 @@ class X1G4Series(Inverter):
 
     Includes X-Forwarded-For for direct LAN API access
     """
+
+    endpoints = (POST_QUERY_XFF, POST_BODY_XFF)
 
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
@@ -58,15 +61,3 @@ class X1G4Series(Inverter):
     @classmethod
     def inverter_serial_number_getter(cls, response: Dict[str, Any]) -> Optional[str]:
         return response["information"][2]
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = [
-            cls._build(host, port, pwd, True),
-            cls._build(host, port, pwd, False),
-        ]
-        for inverter in versions:
-            inverter.http_client = inverter.http_client.with_headers(
-                {"X-Forwarded-For": "5.8.8.8"}
-            )
-        return versions

@@ -2,7 +2,8 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solaxng.inverter import Inverter, InverterHttpClient, Method
+from solaxng.endpoints import GET_REALTIME_HTM
+from solaxng.inverter import Inverter
 from solaxng.units import DailyTotal, Total, Units
 
 
@@ -11,6 +12,8 @@ class XHybrid(Inverter):
     Tested with:
     * SK-TL5000E
     """
+
+    endpoints = (GET_REALTIME_HTM,)
 
     _schema = vol.Schema(
         {
@@ -28,19 +31,6 @@ class XHybrid(Inverter):
         },
         extra=vol.REMOVE_EXTRA,
     )
-
-    @classmethod
-    def _build(cls, host, port, pwd="", params_in_query=True):
-        base = "http://{}:{}/api/realTimeData.htm"
-        url = base.format(host, port)
-        http_client = InverterHttpClient(url=url, method=Method.GET, pwd="")
-
-        return cls(http_client)
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = [cls._build(host, port)]
-        return versions
 
     # key: name of sensor
     # value.0: index
