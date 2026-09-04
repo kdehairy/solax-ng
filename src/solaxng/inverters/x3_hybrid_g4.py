@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
+from solaxng.endpoints import POST_BODY_XFF
 from solaxng.inverter import Inverter
 from solaxng.units import DailyTotal, Measurement, Total, Units
 from solaxng.utils import (
@@ -16,6 +17,8 @@ from solaxng.utils import (
 
 
 class X3HybridG4(Inverter):
+
+    endpoints = (POST_BODY_XFF,)
     """X3 Hybrid G4 v3.006.04"""
 
     # pylint: disable=duplicate-code
@@ -36,15 +39,6 @@ class X3HybridG4(Inverter):
         },
         extra=vol.REMOVE_EXTRA,
     )
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = [cls._build(host, port, pwd, False)]
-        for inverter in versions:
-            inverter.http_client = inverter.http_client.with_headers(
-                {"X-Forwarded-For": "5.8.8.8"}
-            )
-        return versions
 
     @classmethod
     def _decode_run_mode(cls, run_mode):

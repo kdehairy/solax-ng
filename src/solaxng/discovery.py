@@ -1,12 +1,10 @@
 import asyncio
 import logging
 import sys
-from asyncio import Future, Task
-from collections import defaultdict
-from typing import Dict, Sequence, Set, Tuple, Type, TypedDict, cast
+from typing import Dict, List, Sequence, Set, Tuple, Type, TypedDict
 
-from solaxng.inverter import Inverter
-from solaxng.inverter_http_client import InverterHttpClient
+from solaxng.endpoints import EndpointConfig
+from solaxng.inverter import Inverter, InverterError
 
 __all__ = ("discover", "DiscoveryKeywords", "DiscoveryError")
 
@@ -31,105 +29,80 @@ REGISTRY: Tuple[Type[Inverter], ...] = tuple(
 
 logging.basicConfig(level=logging.INFO)
 
+STAGGER_SECONDS = 1
+
 
 class DiscoveryKeywords(TypedDict, total=False):
     inverters: Sequence[Type[Inverter]]
 
 
-if sys.version_info >= (3, 9):
-    _InverterTask = Task[Inverter]
-else:
-    _InverterTask = Task  # pragma: no cover
+ProbePlan = Dict[EndpointConfig, List[Type[Inverter]]]
 
 
-class _DiscoveryHttpClient:
-    def __init__(
-        self,
-        inverter: Inverter,
-        http_client: InverterHttpClient,
-        request: Future,
-    ):
-        self._inverter = inverter
-        self._http_client = http_client
-        self._request: Future = request
+def _probe_plan(inverters: Sequence[Type[Inverter]]) -> ProbePlan:
+    """
+    Group the models by the endpoint they declare.
 
-    def __str__(self):
-        return str(self._http_client)
-
-    async def request(self):
-        request = await self._request
-        request.add_done_callback(self._restore_http_client)
-        return await request
-
-    def _restore_http_client(self, _: _InverterTask):
-        self._inverter.http_client = self._http_client
+    Only one inverter is answering, so an endpoint several models share is
+    worth probing once. The plan keeps insertion order, which makes the
+    first endpoint a model declares the one it is built on when it matches.
+    """
+    plan: ProbePlan = {}
+    for cls in inverters:
+        for endpoint in cls.endpoints:
+            plan.setdefault(endpoint, []).append(cls)
+    return plan
 
 
-async def _discovery_task(i) -> Inverter:
-    logging.info("Trying inverter %s", i)
-    await i.get_data()
-    return i
+async def _probe(http_client, delay):
+    await asyncio.sleep(delay)
+    logging.info("Probing %s", http_client)
+    return await http_client.request()
 
 
 async def discover(
     host, port, pwd="", **kwargs: Unpack[DiscoveryKeywords]
 ) -> Set[Inverter]:
-    done: Set[_InverterTask] = set()
-    pending: Set[_InverterTask] = set()
-    failures = set()
-    requests: Dict[InverterHttpClient, Future] = defaultdict(
-        asyncio.get_running_loop().create_future
-    )
+    plan = _probe_plan(kwargs.get("inverters", REGISTRY))
 
-    for cls in kwargs.get("inverters", REGISTRY):
-        for inverter in cls.build_all_variants(host, port, pwd):
-            inverter.http_client = cast(
-                InverterHttpClient,
-                _DiscoveryHttpClient(
-                    inverter, inverter.http_client, requests[inverter.http_client]
-                ),
-            )
-
-            task = asyncio.create_task(_discovery_task(inverter), name=f"{inverter}")
-            pending.add(task)
-
-    if not pending:
+    if not plan:
         raise DiscoveryError("No inverters to try to discover")
 
-    def cancel(pending: Set[_InverterTask]) -> Set[_InverterTask]:
-        for task in pending:
-            task.cancel()
-        return pending
+    clients = {endpoint: endpoint.build(host, port, pwd) for endpoint in plan}
 
-    def remove_failures_from(done: Set[_InverterTask]) -> None:
-        for task in set(done):
-            exc = task.exception()
-            if exc:
-                failures.add(exc)
-                done.remove(task)
+    # stagger HTTP requests to prevent accidental Denial Of Service
+    responses = await asyncio.gather(
+        *(
+            _probe(clients[endpoint], position * STAGGER_SECONDS)
+            for position, endpoint in enumerate(plan)
+        ),
+        return_exceptions=True,
+    )
 
-    # stagger HTTP request to prevent accidental Denial Of Service
-    async def stagger() -> None:
-        for http_client, future in requests.items():
-            future.set_result(asyncio.create_task(http_client.request()))
-            await asyncio.sleep(1)
+    failures: List[BaseException] = []
+    discovered: Dict[Type[Inverter], Inverter] = {}
 
-    staggered = asyncio.create_task(stagger())
+    for endpoint, response in zip(plan, responses):
+        if isinstance(response, BaseException):
+            failures.append(response)
+            continue
 
-    try:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.ALL_COMPLETED)
-    except asyncio.CancelledError:
-        staggered.cancel()
-        await asyncio.gather(staggered, *cancel(pending), return_exceptions=True)
-        raise
+        for cls in plan[endpoint]:
+            if cls in discovered:
+                continue
 
-    remove_failures_from(done)
-    staggered.cancel()
-    await asyncio.gather(staggered, *cancel(pending), return_exceptions=True)
+            inverter = cls(clients[endpoint])
+            try:
+                inverter.parse_response(response)
+            except InverterError as ex:
+                failures.append(ex)
+                continue
 
-    if done:
-        logging.info("Discovered inverters: %s", {task.result() for task in done})
-        return {task.result() for task in done}
+            discovered[cls] = inverter
+
+    if discovered:
+        logging.info("Discovered inverters: %s", [str(i) for i in discovered.values()])
+        return set(discovered.values())
 
     raise DiscoveryError(
         "Unable to connect to the inverter at "

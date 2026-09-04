@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional, Tuple
 import aiohttp
 import voluptuous as vol
 
-from solaxng import utils
-from solaxng.inverter_http_client import InverterHttpClient, Method
+from solaxng.endpoints import POST_BODY, POST_QUERY, EndpointConfig
+from solaxng.inverter_http_client import InverterHttpClient
 from solaxng.response_parser import InverterResponse, ResponseDecoder, ResponseParser
 from solaxng.units import Measurement, Units
 
@@ -28,6 +28,8 @@ class Inverter:
     # pylint: enable=C0301
     _schema = vol.Schema({})  # type: vol.Schema
 
+    endpoints: Tuple[EndpointConfig, ...] = (POST_QUERY, POST_BODY)
+
     def __init__(self, http_client: InverterHttpClient):
         self.manufacturer = "Solax"
         self.http_client = http_client
@@ -43,33 +45,11 @@ class Inverter:
             inverter_serial_number_getter,
         )
 
-    @classmethod
-    def _build(cls, host, port, pwd="", params_in_query=True):
-        url = utils.to_url(host, port)
-        http_client = InverterHttpClient(url=url, method=Method.POST, pwd=pwd)
-        if params_in_query:
-            http_client = http_client.with_default_query()
-        else:
-            http_client = http_client.with_default_data()
-
-        return cls(http_client)
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = {
-            cls._build(host, port, pwd, True),
-            cls._build(host, port, pwd, False),
-        }
-        return versions
-
     async def get_data(self) -> InverterResponse:
         try:
             data = await self.make_request()
         except aiohttp.ClientError as ex:
             msg = "Could not connect to inverter endpoint"
-            raise InverterError(msg, str(self.__class__.__name__)) from ex
-        except vol.Invalid as ex:
-            msg = "Received malformed JSON from inverter"
             raise InverterError(msg, str(self.__class__.__name__)) from ex
         return data
 
@@ -79,7 +59,20 @@ class Inverter:
         Raise exception if unable to get data
         """
         raw_response = await self.http_client.request()
-        return self.response_parser.handle_response(raw_response)
+        return self.parse_response(raw_response)
+
+    def parse_response(self, raw_response) -> InverterResponse:
+        """
+        Decode a response already read from this inverter's endpoint.
+
+        Discovery calls this to test one fetched payload against many
+        models without re-issuing the request.
+        """
+        try:
+            return self.response_parser.handle_response(raw_response)
+        except Exception as ex:  # pylint: disable=broad-except
+            msg = "Received malformed JSON from inverter"
+            raise InverterError(msg, str(self.__class__.__name__)) from ex
 
     @classmethod
     def sensor_map(cls) -> Dict[str, Tuple[int, Measurement]]:
