@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import aiohttp
 import voluptuous as vol
@@ -44,10 +44,6 @@ class Inverter:
             dongle_serial_number_getter,
             inverter_serial_number_getter,
         )
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd="") -> List["Inverter"]:
-        return [cls(endpoint.build(host, port, pwd)) for endpoint in cls.endpoints]
 
     async def get_data(self) -> InverterResponse:
         try:
