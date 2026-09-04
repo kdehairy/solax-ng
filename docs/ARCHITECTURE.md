@@ -17,7 +17,7 @@ right one by trying them concurrently against the target host.
 
 ```
 src/solaxng/
-├── __init__.py            RealTimeAPI facade + retry loop
+├── __init__.py            RealTimeAPI + rt_request retry loop
 ├── discovery.py           Concurrent probing across the inverter registry
 ├── inverter.py            Inverter base class (schema, decoder, lifecycle)
 ├── inverter_http_client.py  Immutable HTTP request description + transport
@@ -119,36 +119,45 @@ registry:
 3. Deduplicated requests are **staggered** one second apart
    (`stagger()`) rather than fired all at once, to avoid hammering a
    small embedded HTTP server on the inverter's dongle.
-4. Tasks are awaited with `asyncio.wait(..., return_when=...)`. In the
-   default `FIRST_COMPLETED` mode, discovery returns as soon as any model's
-   schema validates the response and cancels the rest. In
-   `ALL_COMPLETED` mode it returns the full set of models that validated
-   the response — used by the schema-collision tests (below) and by
-   callers who want to detect ambiguity themselves.
+4. Tasks are awaited with `asyncio.wait(..., return_when=asyncio.ALL_COMPLETED)`
+   — discovery always waits for every staggered probe and returns the full
+   `Set[Inverter]` of every model whose schema validated the response. It
+   never auto-picks a single "winner": two schemas matching the same
+   response is a correctness bug (see "Schema collisions" below), not
+   something discovery should silently race and paper over.
 5. Failures (network errors, schema mismatches) are collected and only
    surfaced (as a `DiscoveryError`) if *no* model matched at all.
 
-`solaxng.real_time_api()` / `RealTimeAPI` in `__init__.py` is a thin
-convenience wrapper: it runs `discover()` once with `FIRST_COMPLETED`, then
-wraps the resulting `Inverter` with `rt_request()`, which retries on
-`asyncio.TimeoutError` with exponential backoff (`5, 15, 35, ...` seconds)
-up to 3 attempts.
+`RealTimeAPI` (`__init__.py`) wraps a single already-resolved `Inverter`
+with `rt_request()`, which retries on `asyncio.TimeoutError` with
+exponential backoff (`5, 15, 35, ...` seconds) up to 3 attempts. Callers get
+that `Inverter` themselves by calling `discover()` and resolving the 0/1/N
+match cases explicitly — e.g. the Home Assistant integration's config flow
+calls `discover()` directly and, when more than one model matches, prompts
+the user to pick one and persists that choice so future `discover()` calls
+can be narrowed with `inverters=[...]`.
 
 ## Schema collisions
 
-Because model detection is "whichever schema validates first," two models
-whose schemas both accept the same payload shape are a correctness bug:
-which one wins becomes a race rather than a deliberate choice, and it can
-flip between runs. `tests/test_schema_ambiguity.py` guards against this
-directly: for every real fixture response, it checks that *only* the
-model that produced that fixture validates it against the full registry.
-It also exposes a permissiveness ranking (`python -m
+Because discovery returns every model whose schema matches (never just a
+winner), an ambiguous match — two or more models' schemas accepting the
+same payload — is something callers must expect and handle, not something
+the library can promise away. These schemas are reverse-engineered from
+observed payloads, since Solax publishes neither a protocol spec nor a
+model-identifying field, so some models may be genuinely indistinguishable
+from a single response; tightening a schema reduces how often that happens
+but can't guarantee eliminating it. `tests/test_schema_ambiguity.py` guards
+against the fixable kind: for every real fixture response, it checks that
+*only* the model that produced that fixture validates it against the full
+registry, and exposes a permissiveness ranking (`python -m
 tests.test_schema_ambiguity`) to help identify which schema needs to be
 tightened when a collision is found. Keeping each model's `_schema` as
 tight as the real firmware payload allows (exact `data` length bounds,
 required distinguishing fields) is what keeps this test meaningful — a
 schema that uses `vol.ALLOW_EXTRA` and loose length bounds is more likely
-to shadow a sibling model.
+to shadow a sibling model than a genuinely irreducible collision. Some
+fixture cases are expected to fail this check permanently rather than be a
+to-do list to clear to zero — see the `xfail` reason in the test file.
 
 ## Extension point: adding a new inverter
 

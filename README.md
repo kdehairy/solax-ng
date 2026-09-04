@@ -22,8 +22,12 @@ import solaxng
 import asyncio
 
 async def work():
-    r = await solaxng.real_time_api('10.0.0.1')
-    return await r.get_data()
+    inverters = await solaxng.discover('10.0.0.1', 80)
+    if len(inverters) != 1:
+        # This quickstart doesn't handle ambiguous matches - see below.
+        raise RuntimeError(f"Expected exactly one inverter to match, got: {inverters}")
+    api = solaxng.RealTimeAPI(next(iter(inverters)))
+    return await api.get_data()
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -31,9 +35,20 @@ data = loop.run_until_complete(work())
 print(data)
 ```
 
-This will try all the inverter classes in turn until it finds the first one that works with your installation. You can see the list of inverter implementation classes in the entry points configured in [pyproject.toml](pyproject.toml).
+`discover()` tries all the inverter classes concurrently and returns the full set of every one
+whose schema matched your inverter's response — usually exactly one, but not always. Solax doesn't
+publish a protocol spec or a model-identifying field, so these schemas are reverse-engineered from
+observed payloads, and two models can genuinely be indistinguishable from a single response.
+`discover()` never guesses on your behalf — it just hands back everything that matched, and it's up
+to the caller to decide what that means. You can see the list of inverter implementation classes in
+the entry points configured in [pyproject.toml](pyproject.toml).
 
-If you want to bypass the inverter discovery code and use a specific inverter class, you can invoke `discover` specifying directly the class. In this example, the X1 Hybrid Gen4 implementation is used:
+If the set is empty, `discover()` raises `DiscoveryError`. If it has more than one entry, a real
+application should expect that and handle it deliberately — e.g. ask the user to pick a model once
+and remember that choice, which is what the Home Assistant integration's config flow does — rather
+than treat it as a one-off error like the snippet above does. Narrowing the search to a specific
+class up front, as shown below, is both how you'd apply that remembered choice and the pattern to
+use if you already know your inverter model and want to skip the concurrent probing.
 
 ```
 from importlib.metadata import entry_points
@@ -45,7 +60,8 @@ INVERTERS_ENTRY_POINTS = {
 }
 
 async def work():
-    inverter = await solaxng.discover("10.0.0.1", 80, "xxxxx", inverters=[INVERTERS_ENTRY_POINTS.get("x1_hybrid_gen4")], return_when=asyncio.FIRST_COMPLETED)
+    inverters = await solaxng.discover("10.0.0.1", 80, "xxxxx", inverters=[INVERTERS_ENTRY_POINTS.get("x1_hybrid_gen4")])
+    inverter = next(iter(inverters))
     return await inverter.get_data()
 
 loop = asyncio.new_event_loop()

@@ -3,7 +3,7 @@ import logging
 import sys
 from asyncio import Future, Task
 from collections import defaultdict
-from typing import Dict, Literal, Sequence, Set, Tuple, Type, TypedDict, Union, cast
+from typing import Dict, Sequence, Set, Tuple, Type, TypedDict, cast
 
 from solaxng.inverter import Inverter
 from solaxng.inverter_http_client import InverterHttpClient
@@ -20,60 +20,12 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Unpack  # pragma: no cover
 
-# Ranks inverter schemas from most-specific (least permissive) to
-# least-specific (most permissive). REGISTRY is sorted by this table so
-# that discover()'s tie-break (lowest rank wins) prefers the more
-# tightly matching inverter when several schemas validate the same
-# response.
-#
-# This is NOT derived from entry_points.txt order: setuptools
-# alphabetizes entry points on install , so that ordering can't be
-# relied on. This table is maintained by hand; drift is caught by
-# tests/test_schema_ambiguity.py::test_registry_order_matches_specificity,
-# which recomputes the expected order from tests/fixtures.py.
-#
-# Classes not listed here (e.g. a newly added inverter) rank last -- a
-# conservative default that never lets an unranked schema outrank a
-# known-specific one. The guardrail test forces new inverters to be
-# ranked explicitly rather than silently relying on this default.
-_SCHEMA_SPECIFICITY_ORDER: Tuple[str, ...] = (
-    "X3Ultra",
-    "X3MicProG2",
-    "X3EVC",
-    "X1Mini",
-    "QVOLTHYBG33P",
-    "XHybrid",
-    "X3HybridG4",
-    "X1Smart",
-    "X1LiteLV",
-    "X1HybridGen4",
-    "X1G4Series",
-    "X1",
-    "X3V34",
-    "X3",
-    "X1MiniV34",
-    "X1Boost",
-)
-_SCHEMA_SPECIFICITY_RANK: Dict[str, int] = {
-    name: rank for rank, name in enumerate(_SCHEMA_SPECIFICITY_ORDER)
-}
-
-
-def _specificity_rank(inverter_class: Type[Inverter]) -> int:
-    return _SCHEMA_SPECIFICITY_RANK.get(
-        inverter_class.__name__, len(_SCHEMA_SPECIFICITY_ORDER)
-    )
-
-
 # registry of inverters
 REGISTRY: Tuple[Type[Inverter], ...] = tuple(
-    sorted(
-        dict.fromkeys(
-            loaded
-            for ep in entry_points(group="solaxng.inverter")
-            if issubclass(loaded := ep.load(), Inverter)
-        ),
-        key=_specificity_rank,
+    dict.fromkeys(
+        loaded
+        for ep in entry_points(group="solaxng.inverter")
+        if issubclass(loaded := ep.load(), Inverter)
     )
 )
 
@@ -82,7 +34,6 @@ logging.basicConfig(level=logging.INFO)
 
 class DiscoveryKeywords(TypedDict, total=False):
     inverters: Sequence[Type[Inverter]]
-    return_when: Literal["ALL_COMPLETED", "FIRST_COMPLETED"]
 
 
 if sys.version_info >= (3, 9):
@@ -122,8 +73,7 @@ async def _discovery_task(i) -> Inverter:
 
 async def discover(
     host, port, pwd="", **kwargs: Unpack[DiscoveryKeywords]
-) -> Union[Inverter, Set[Inverter]]:
-    # pylint: disable=too-many-locals
+) -> Set[Inverter]:
     done: Set[_InverterTask] = set()
     pending: Set[_InverterTask] = set()
     failures = set()
@@ -131,13 +81,7 @@ async def discover(
         asyncio.get_running_loop().create_future
     )
 
-    # rank of the class each task was built from, in the order it was
-    # offered to discover(); used to break ties deterministically when
-    # several inverters' schemas match the same response
-    priority: Dict[_InverterTask, int] = {}
-
-    return_when = kwargs.get("return_when", asyncio.FIRST_COMPLETED)
-    for rank, cls in enumerate(kwargs.get("inverters", REGISTRY)):
+    for cls in kwargs.get("inverters", REGISTRY):
         for inverter in cls.build_all_variants(host, port, pwd):
             inverter.http_client = cast(
                 InverterHttpClient,
@@ -147,7 +91,6 @@ async def discover(
             )
 
             task = asyncio.create_task(_discovery_task(inverter), name=f"{inverter}")
-            priority[task] = rank
             pending.add(task)
 
     if not pending:
@@ -173,24 +116,12 @@ async def discover(
 
     staggered = asyncio.create_task(stagger())
 
-    while pending and (not done or return_when != asyncio.FIRST_COMPLETED):
-        try:
-            done, pending = await asyncio.wait(pending, return_when=return_when)
-        except asyncio.CancelledError:
-            staggered.cancel()
-            await asyncio.gather(staggered, *cancel(pending), return_exceptions=True)
-            raise
-
-        remove_failures_from(done)
-
-        if done and return_when == asyncio.FIRST_COMPLETED:
-            break
-
-        logging.debug("%d discovery tasks are still running...", len(pending))
-
-        if pending and return_when != asyncio.FIRST_COMPLETED:
-            pending.update(done)
-            done.clear()
+    try:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.ALL_COMPLETED)
+    except asyncio.CancelledError:
+        staggered.cancel()
+        await asyncio.gather(staggered, *cancel(pending), return_exceptions=True)
+        raise
 
     remove_failures_from(done)
     staggered.cancel()
@@ -198,10 +129,6 @@ async def discover(
 
     if done:
         logging.info("Discovered inverters: %s", {task.result() for task in done})
-        if return_when == asyncio.FIRST_COMPLETED:
-            winner = min(done, key=priority.__getitem__)
-            return await winner
-
         return {task.result() for task in done}
 
     raise DiscoveryError(
