@@ -55,9 +55,6 @@ class Inverter:
         except aiohttp.ClientError as ex:
             msg = "Could not connect to inverter endpoint"
             raise InverterError(msg, str(self.__class__.__name__)) from ex
-        except vol.Invalid as ex:
-            msg = "Received malformed JSON from inverter"
-            raise InverterError(msg, str(self.__class__.__name__)) from ex
         return data
 
     async def make_request(self) -> InverterResponse:
@@ -66,7 +63,20 @@ class Inverter:
         Raise exception if unable to get data
         """
         raw_response = await self.http_client.request()
-        return self.response_parser.handle_response(raw_response)
+        return self.parse_response(raw_response)
+
+    def parse_response(self, raw_response) -> InverterResponse:
+        """
+        Decode a response already read from this inverter's endpoint.
+
+        Discovery calls this to test one fetched payload against many
+        models without re-issuing the request.
+        """
+        try:
+            return self.response_parser.handle_response(raw_response)
+        except Exception as ex:  # pylint: disable=broad-except
+            msg = "Received malformed JSON from inverter"
+            raise InverterError(msg, str(self.__class__.__name__)) from ex
 
     @classmethod
     def sensor_map(cls) -> Dict[str, Tuple[int, Measurement]]:

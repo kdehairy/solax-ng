@@ -1,24 +1,69 @@
 import asyncio
 
+import aiohttp
 import pytest
 
 import solaxng
-from solaxng import InverterResponse
-from solaxng.discovery import REGISTRY, DiscoveryError
-from solaxng.inverter import InverterError
-from solaxng.inverters import X1Boost
+from solaxng.discovery import REGISTRY, DiscoveryError, _probe_plan
+from solaxng.endpoints import POST_BODY, POST_BODY_XFF, POST_QUERY, POST_QUERY_XFF
+from solaxng.inverters import X1Boost, X1MiniV34, X3Ultra
+from tests.samples.responses import X1_BOOST_RESPONSE
+
+# pylint: disable=too-few-public-methods
+
+
+class SlowHttpClient:
+    def __init__(self, http_client, delay):
+        self.http_client = http_client
+        self.delay = delay
+
+    async def request(self):
+        await asyncio.sleep(self.delay)
+        return await self.http_client.request()
+
+
+class FailingHttpClient:
+    async def request(self):
+        raise aiohttp.ClientError("no inverter here")
+
+
+class SlowEndpoint:
+    """Answers correctly, but only after the staggering is long over."""
+
+    def __init__(self, endpoint, delay):
+        self.endpoint = endpoint
+        self.delay = delay
+
+    def build(self, host, port, pwd=""):
+        return SlowHttpClient(self.endpoint.build(host, port, pwd), self.delay)
+
+
+class FailingEndpoint:
+    def build(self, *_args, **_kwargs):
+        return FailingHttpClient()
 
 
 class DelayedX1Boost(X1Boost):
-    async def get_data(self) -> InverterResponse:
-        await asyncio.sleep(10)
-        return await super().get_data()
+    endpoints = (SlowEndpoint(POST_QUERY_XFF, 5),)  # type: ignore[assignment]
 
 
 class DelayedFailedX1Boost(X1Boost):
-    async def make_request(self) -> InverterResponse:
-        await asyncio.sleep(5)
-        raise InverterError
+    endpoints = (FailingEndpoint(),)  # type: ignore[assignment]
+
+
+def test_probe_plan_groups_models_by_shared_endpoint():
+    plan = _probe_plan([X1Boost, X1MiniV34, X3Ultra])
+
+    assert list(plan) == [POST_QUERY_XFF, POST_BODY_XFF, POST_QUERY, POST_BODY]
+    assert plan[POST_QUERY_XFF] == [X1Boost]
+    assert plan[POST_BODY] == [X1MiniV34, X3Ultra]
+
+
+def test_probe_plan_bounds_requests_by_endpoints_not_models():
+    plan = _probe_plan(REGISTRY)
+
+    assert len(REGISTRY) > len(plan)
+    assert len(plan) == 5
 
 
 @pytest.mark.asyncio
@@ -51,6 +96,35 @@ async def test_discovered_inverter_wraps_in_real_time_api(inverters_fixture):
 
 
 @pytest.mark.asyncio
+async def test_model_answering_on_two_endpoints_is_reported_once(httpserver):
+    httpserver.expect_request(uri="/", method="POST").respond_with_json(
+        X1_BOOST_RESPONSE
+    )
+
+    inverters = await solaxng.discover(
+        httpserver.host, httpserver.port, inverters=[X1Boost]
+    )
+
+    assert len(inverters) == 1
+    found = next(iter(inverters))
+    assert isinstance(found, X1Boost)
+    assert found.http_client.query == "optType=ReadRealTimeData"
+
+
+@pytest.mark.asyncio
+async def test_model_is_not_reported_for_an_endpoint_it_never_declared(httpserver):
+    httpserver.expect_request(
+        uri="/", method="POST", headers={"X-Forwarded-For": "5.8.8.8"}
+    ).respond_with_json(X1_BOOST_RESPONSE)
+
+    inverters = await solaxng.discover(
+        httpserver.host, httpserver.port, inverters=[X1Boost, X1MiniV34]
+    )
+
+    assert {type(inverter) for inverter in inverters} == {X1Boost}
+
+
+@pytest.mark.asyncio
 async def test_discovery_cancelled_error_while_staggering(
     inverters_fixture,
 ):
@@ -75,8 +149,7 @@ async def test_discovery_cancelled_error_after_staggering(
     if inverter_class is not X1Boost:
         pytest.skip()
 
-    inverters = set(REGISTRY)
-    inverters.add(DelayedX1Boost)
+    inverters = list(REGISTRY) + [DelayedX1Boost]
 
     task = asyncio.create_task(solaxng.discover(*conn, inverters=inverters))
     await asyncio.sleep(7)
