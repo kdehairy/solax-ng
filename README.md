@@ -35,13 +35,14 @@ data = loop.run_until_complete(work())
 print(data)
 ```
 
-`discover()` tries all the inverter classes concurrently and returns the full set of every one
-whose schema matched your inverter's response — usually exactly one, but not always. Solax doesn't
-publish a protocol spec or a model-identifying field, so these schemas are reverse-engineered from
-observed payloads, and two models can genuinely be indistinguishable from a single response.
-`discover()` never guesses on your behalf — it just hands back everything that matched, and it's up
-to the caller to decide what that means. You can see the list of inverter implementation classes in
-the entry points configured in [pyproject.toml](pyproject.toml).
+`discover()` asks your inverter once per distinct request shape the known models use, then returns
+the full set of every model whose schema matched a response — at most one entry per model, usually
+exactly one entry in total, but not always. Solax doesn't publish a protocol spec or a 
+model-identifying field, so these schemas are reverse-engineered from observed payloads, and two 
+models can genuinely be indistinguishable from a single response. `discover()` never guesses on 
+your behalf — it just hands back everything that matched, and it's up to the caller to decide what 
+that means. You can see the list of inverter implementation classes in the entry points configured 
+in [pyproject.toml](pyproject.toml).
 
 If the set is empty, `discover()` raises `DiscoveryError`. If it has more than one entry, a real
 application should expect that and handle it deliberately — e.g. ask the user to pick a model once

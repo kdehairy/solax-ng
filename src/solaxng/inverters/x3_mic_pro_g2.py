@@ -2,12 +2,15 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
+from solaxng.endpoints import POST_BODY
 from solaxng.inverter import Inverter
 from solaxng.units import DailyTotal, Total, Units
 from solaxng.utils import div10, div100, pack_u16, to_signed, to_signed32, twoway_div10
 
 
 class X3MicProG2(Inverter):
+
+    endpoints = (POST_BODY,)
     """X3MicProG2 v3.008.10"""
 
     # pylint: disable=duplicate-code
@@ -28,10 +31,6 @@ class X3MicProG2(Inverter):
         },
         extra=vol.REMOVE_EXTRA,
     )
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        return [cls._build(host, port, pwd, False)]
 
     @classmethod
     def _decode_run_mode(cls, run_mode):

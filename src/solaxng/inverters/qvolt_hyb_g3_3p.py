@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
+from solaxng.endpoints import POST_BODY
 from solaxng.inverter import Inverter, InverterHttpClient
 from solaxng.units import DailyTotal, Measurement, Total, Units
 from solaxng.utils import (
@@ -19,6 +20,8 @@ class QVOLTHYBG33P(Inverter):
     QCells
     Q.VOLT HYB-G3-3P
     """
+
+    endpoints = (POST_BODY,)
 
     class Processors:
         """
@@ -173,8 +176,3 @@ class QVOLTHYBG33P(Inverter):
     @classmethod
     def inverter_serial_number_getter(cls, response: Dict[str, Any]) -> Optional[str]:
         return response["information"][2]
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        versions = [cls._build(host, port, pwd, False)]
-        return versions

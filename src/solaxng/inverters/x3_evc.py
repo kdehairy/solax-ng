@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
+from solaxng.endpoints import POST_BODY
 from solaxng.inverter import Inverter
 from solaxng.units import Total, Units
 from solaxng.utils import (
@@ -16,6 +17,8 @@ from solaxng.utils import (
 
 
 class X3EVC(Inverter):
+
+    endpoints = (POST_BODY,)
     """X3 EVC"""
 
     # pylint: disable=duplicate-code
@@ -36,10 +39,6 @@ class X3EVC(Inverter):
         },
         extra=vol.REMOVE_EXTRA,
     )
-
-    @classmethod
-    def build_all_variants(cls, host, port, pwd=""):
-        return [cls._build(host, port, pwd, False)]
 
     @classmethod
     def _decode_device_state(cls, device_state):

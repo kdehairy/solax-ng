@@ -9,7 +9,8 @@ from tests import fixtures
 
 async def build_right_variant(inverter, conn) -> Inverter:
     last_error: BaseException = BaseException("anticipating errors")
-    for i in inverter.build_all_variants(*conn):
+    for endpoint in inverter.endpoints:
+        i = inverter(endpoint.build(*conn))
         try:
             await i.get_data()
             return i
