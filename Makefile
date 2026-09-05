@@ -7,13 +7,17 @@ verify: init
 	uv run black --check .
 	uv run isort --profile black .
 	uv run mypy .
-	uv run flake8 --ignore=E501,E704 src tests
-	uv run pylint -d 'C0111' src tests
+	uv run flake8 --ignore=E501,E704 src tests utils
+	uv run pylint -d 'C0111' src tests utils
 	uv run pytest --cov=solaxng --cov-fail-under=100 --cov-branch --cov-report=term-missing .
 
 .PHONY: test
 test:
 	uv run pytest --cov=solaxng --cov-fail-under=100 --cov-branch --cov-report=term-missing .
+
+.PHONY: discover
+discover:
+	uv run python utils/discover_inverter.py
 
 BUMP ?= patch
 
