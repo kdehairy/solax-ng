@@ -4,7 +4,25 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    paths:
+      - 'src/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/*.yml'
+      - '.pre-commit-config.yaml'
+      - 'mypy.ini'
+      - '.flake8'
+      - '.isort.cfg'
   pull_request:
+    paths:
+      - 'src/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/*.yml'
+      - '.pre-commit-config.yaml'
+      - 'mypy.ini'
+      - '.flake8'
+      - '.isort.cfg'
 
 jobs:
   build:
