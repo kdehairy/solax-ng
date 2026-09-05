@@ -7,6 +7,7 @@ on:
     paths:
       - 'src/**/*.py'
       - 'tests/**/*.py'
+      - 'utils/**/*.py'
       - 'pyproject.toml'
       - '.github/workflows/*.yml'
       - '.pre-commit-config.yaml'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'src/**/*.py'
       - 'tests/**/*.py'
+      - 'utils/**/*.py'
       - 'pyproject.toml'
       - '.github/workflows/*.yml'
       - '.pre-commit-config.yaml'
@@ -51,10 +53,10 @@ jobs:
         uv run isort --check-only --profile black .
     - name: Lint with flake8
       run: |
-        uv run flake8 --ignore=E501,E704 src tests
+        uv run flake8 --ignore=E501,E704 src tests utils
     - name: Lint with pylint
       run: |
-        uv run pylint -d 'C0111' src tests
+        uv run pylint -d 'C0111' src tests utils
     - name: Test with pytest
       run: |
         uv run pytest --cov=solaxng --cov-branch --cov-report=term-missing .
