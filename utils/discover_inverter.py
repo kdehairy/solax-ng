@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
@@ -22,6 +23,7 @@ from solaxng import discover
 from solaxng.discovery import DiscoveryError
 from solaxng.inverter import Inverter, InverterError
 from solaxng.response_parser import InverterResponse
+from utils.new_model_report import collect, render
 
 if sys.version_info >= (3, 10):
     from importlib.metadata import entry_points
@@ -235,6 +237,57 @@ def save(path: str, payload: bytes) -> None:
     print(f"\nRaw response written to {path}")
 
 
+def default_report_path() -> str:
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"solax-unknown-model-{stamp}.md"
+
+
+async def report_unsupported(
+    args: argparse.Namespace, host: str, port: int, pwd: str
+) -> int:
+    """
+    No registered model matched the response discovery got. Probe again (the
+    payloads discovery saw are already gone) and, if the inverter answers at
+    all, write everything observed out as a document an agent can implement
+    the missing model from.
+    """
+    print("\nNo model matched. Probing again to write a report...")
+    probes = await collect(host, port, pwd)
+
+    if all(probe.payload is None for probe in probes):
+        print(
+            "\nThe inverter could not be reached on any known request shape:",
+            file=sys.stderr,
+        )
+        for probe in probes:
+            print(
+                f"  {probe.endpoint.name}: {type(probe.error).__name__}: {probe.error}",
+                file=sys.stderr,
+            )
+        return 1
+
+    path = args.report or default_report_path()
+    if os.path.exists(path):
+        print(f"Refusing to overwrite existing file: {path}", file=sys.stderr)
+        return 2
+
+    document = render(host, port, probes)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(document)
+    print(
+        f"\nThe inverter answered, but no model recognised it. Report written to {path}"
+    )
+
+    if args.save:
+        payload = next(
+            (probe.payload for probe in probes if probe.payload is not None), None
+        )
+        if payload is not None:
+            save(args.save, payload)
+
+    return 3
+
+
 async def run(args: argparse.Namespace, host: str, port: int, pwd: str) -> int:
     print(
         f"Probing {host}:{port} — every known request shape is tried once, "
@@ -243,12 +296,8 @@ async def run(args: argparse.Namespace, host: str, port: int, pwd: str) -> int:
 
     try:
         matched = await discover(host, port, pwd)
-    except DiscoveryError as ex:
-        print(
-            f"\nNo model matched, or the inverter could not be reached.\n\n{ex}",
-            file=sys.stderr,
-        )
-        return 1
+    except DiscoveryError:
+        return await report_unsupported(args, host, port, pwd)
 
     candidates = sorted(matched, key=lambda inverter: type(inverter).__name__)
     inverter = choose(candidates, host, port, pwd)
@@ -296,6 +345,14 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help="write the untouched JSON response to PATH",
     )
     parser.add_argument(
+        "--report",
+        metavar="PATH",
+        help=(
+            "where to write the unsupported-model report if no model matches "
+            "(default: solax-unknown-model-<timestamp>.md)"
+        ),
+    )
+    parser.add_argument(
         "--verbose", action="store_true", help="show the library's probe logging"
     )
     return parser.parse_args(argv)
@@ -307,6 +364,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.save and os.path.exists(args.save):
         print(f"Refusing to overwrite existing file: {args.save}", file=sys.stderr)
+        return 2
+
+    if args.report and os.path.exists(args.report):
+        print(f"Refusing to overwrite existing file: {args.report}", file=sys.stderr)
         return 2
 
     try:

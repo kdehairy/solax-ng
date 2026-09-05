@@ -17,7 +17,7 @@ test:
 
 .PHONY: discover
 discover:
-	uv run python utils/discover_inverter.py
+	uv run python -m utils.discover_inverter
 
 BUMP ?= patch
 

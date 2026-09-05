@@ -14,10 +14,10 @@ Points the library at a real inverter and shows what came back:
    sensor map.
 
 ```sh
-make discover                                      # prompts for everything
-uv run python utils/discover_inverter.py --host 10.0.0.1 --port 80
-uv run python utils/discover_inverter.py --host 10.0.0.1 --raw
-uv run python utils/discover_inverter.py --host 10.0.0.1 --save response.json
+make discover                                                     # prompts for everything
+uv run python -m utils.discover_inverter --host 10.0.0.1 --port 80
+uv run python -m utils.discover_inverter --host 10.0.0.1 --raw
+uv run python -m utils.discover_inverter --host 10.0.0.1 --save response.json
 ```
 
 Passing `--host` skips the prompts, so the port defaults to 80 and the password to empty.
@@ -31,3 +31,18 @@ logging.
 More than one candidate is a normal outcome, not a failure: the schemas are reverse-engineered from
 observed payloads and two models can be indistinguishable from a single response, so `discover()`
 reports every match rather than guessing one.
+
+### When nothing matches
+
+If the inverter answers but no registered model's schema accepts the response, the tool probes
+again (`solaxng.discover()` already threw the payloads away) and writes a Markdown report — by
+default `solax-unknown-model-<timestamp>.md`, or `--report PATH` to name it — with everything an
+AI agent needs to implement the missing model: which request shapes answered, the full response,
+why every registered schema rejected it, a ready-to-edit model skeleton with the schema already
+pinned to what was observed, and the `tests/` fixture entries to add. The one thing it can't fill
+in is the sensor mapping table — reading real values off the inverter's display to name each raw
+index is deliberately left for a human.
+
+Exit codes: `0` success or user quit, `1` the inverter couldn't be reached at all, `2` a `--save`
+or `--report` path already exists, `3` the inverter answered but no model matched (report
+written), `130` aborted.
