@@ -77,7 +77,7 @@ print(data)
 
 ## Confirmed Supported Inverters
 
-These inverters have been tested and confirmed to be working. If your inverter is not listed below, this library may still work- please create an issue so we can add your inverter to the list 😊.
+These inverters have been tested and confirmed to be working. If your inverter is not listed below, this library may still work — see [Adding Support for Your Inverter](#adding-support-for-your-inverter) below, or create an issue so we can add it to the list 😊.
 
 * QVOLTHYBG33P (QVOLTHYBG33P)
 * X1
@@ -102,3 +102,34 @@ You can get the list of supported inverters by looking up the `solaxng.inverter`
 for ep in entry_points(group="solaxng.inverter"):
     print(ep)
 ```
+
+## Adding Support for Your Inverter
+
+If `discover()` raises `DiscoveryError` for you, your inverter's response just hasn't been
+reverse-engineered into a schema yet — that only needs one recorded response to fix.
+
+Clone the repo and run the discovery tool against your inverter (include `--pwd` if your
+inverter/dongle needs one — an easy thing to forget, and without it discovery just looks like your
+inverter isn't supported):
+
+```sh
+uv run python -m utils.discover_inverter --host <ip> --port <port> --pwd <password>
+```
+
+If nothing matches, it writes a report (`--report path.md`, default `solax-unknown-model-*.md`)
+with everything needed to add the model: which request shapes your inverter answers, the full
+response, why every known schema rejected it, and a blank table for the one thing nobody but you
+can supply — what each raw value means, read off the inverter's own display or app.
+
+* **Don't want to implement it yourself?** Open an issue with the generated report attached (redact
+  the serial numbers first) and we'll add it.
+* **Using an AI coding agent?** Point it at this repo and ask it to add support for your inverter.
+  The workflow — run the tool above, ask you to fill in the sensor mapping, draft a plan, and
+  implement it once you approve — is written up as a portable
+  [`.agents` protocol](https://dotagentsprotocol.com/) skill at
+  [`.agents/skills/add-inverter-model/SKILL.md`](.agents/skills/add-inverter-model/SKILL.md).
+* **Doing it by hand?** Follow
+  ["Adding a new inverter"](AGENTS.md#adding-a-new-inverter) in `AGENTS.md`.
+
+If you implement it yourself, open a pull request with the new model and its test fixture once
+`make verify` passes — that's what turns "may still work" into a confirmed entry in the list above.
