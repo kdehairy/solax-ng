@@ -8,6 +8,10 @@ from solaxng.utils import div10, div100, pack_u16, to_signed, twoway_div10
 
 
 class X1LiteLV(Inverter):
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X1 Lite LV"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

@@ -8,6 +8,10 @@ from solaxng.utils import startswith
 
 
 class X1(Inverter):
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X1"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

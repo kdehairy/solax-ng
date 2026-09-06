@@ -15,6 +15,10 @@ class XHybrid(Inverter):
 
     endpoints = (GET_REALTIME_HTM,)
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X Hybrid"
+
     _schema = vol.Schema(
         {
             vol.Required("method"): str,

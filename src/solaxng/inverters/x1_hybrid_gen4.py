@@ -11,6 +11,11 @@ from solaxng.utils import div10, div100, pack_u16, to_signed
 class X1HybridGen4(Inverter):
 
     endpoints = (POST_BODY,)
+
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X1 Hybrid Gen4"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

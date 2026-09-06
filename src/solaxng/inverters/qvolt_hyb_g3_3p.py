@@ -23,6 +23,10 @@ class QVOLTHYBG33P(Inverter):
 
     endpoints = (POST_BODY,)
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "Q.VOLT HYB-G3-3P"
+
     class Processors:
         """
         Postprocessors used only in the QVOLTHYBG33P inverter sensor_map.

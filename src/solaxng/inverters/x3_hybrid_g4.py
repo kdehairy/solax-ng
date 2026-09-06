@@ -21,6 +21,10 @@ class X3HybridG4(Inverter):
     endpoints = (POST_BODY_XFF,)
     """X3 Hybrid G4 v3.006.04"""
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X3 Hybrid G4"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

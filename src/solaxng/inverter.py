@@ -25,6 +25,15 @@ class Inverter:
         """
         raise NotImplementedError()
 
+    @classmethod
+    @abstractmethod
+    def friendly_name(cls) -> str:
+        """
+        Inverter implementations should override this to
+        return a human-readable model name for display purposes.
+        """
+        raise NotImplementedError()  # pragma: no cover
+
     # pylint: enable=C0301
     _schema = vol.Schema({})  # type: vol.Schema
 
