@@ -20,6 +20,10 @@ class X1G4Series(Inverter):
 
     endpoints = (POST_QUERY_XFF, POST_BODY_XFF)
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X1 G4 Series"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

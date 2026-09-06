@@ -16,6 +16,10 @@ class X1Boost(Inverter):
 
     endpoints = (POST_QUERY_XFF, POST_BODY_XFF)
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X1 Boost"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

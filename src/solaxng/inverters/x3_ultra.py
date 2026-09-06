@@ -21,6 +21,10 @@ class X3Ultra(Inverter):
     endpoints = (POST_BODY,)
     """X3 Ultra v1.001.20"""
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X3 Ultra"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

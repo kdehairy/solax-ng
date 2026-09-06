@@ -13,6 +13,10 @@ class X3MicProG2(Inverter):
     endpoints = (POST_BODY,)
     """X3MicProG2 v3.008.10"""
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X3 Mic Pro G2"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

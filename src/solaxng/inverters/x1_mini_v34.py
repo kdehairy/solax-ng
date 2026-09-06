@@ -16,6 +16,10 @@ class X1MiniV34(Inverter):
     firmwares-modificados-para-solax-pocket-wifi-v2/
     """
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X1 Mini V34"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

@@ -21,6 +21,10 @@ class X3EVC(Inverter):
     endpoints = (POST_BODY,)
     """X3 EVC"""
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X3 EVC"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {

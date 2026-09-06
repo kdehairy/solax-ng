@@ -17,6 +17,10 @@ from solaxng.utils import (
 class X3V34(Inverter):
     """X3 v2.034.06"""
 
+    @classmethod
+    def friendly_name(cls) -> str:
+        return "X3 V34"
+
     # pylint: disable=duplicate-code
     _schema = vol.Schema(
         {
