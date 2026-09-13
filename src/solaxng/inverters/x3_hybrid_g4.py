@@ -58,7 +58,20 @@ class X3HybridG4(Inverter):
             8: "Self Test",
             9: "Idle",
             10: "Standby",
-        }.get(run_mode)
+            11: "Fault&Charging Mode",
+            20: "TOU-R",
+            21: "TOU-S",
+            22: "TOU-C",
+            23: "TOU-E",
+            24: "TOU-G",
+            25: "TOU-SG",
+            26: "TOU-CG",
+            27: "TOU-EG",
+            28: "TOU-SG-CG",
+            29: "TOU-SG-EG",
+            30: "TOU-CG-EG",
+            31: "Gen",
+        }.get(run_mode, f"unmapped value '{run_mode}'")
 
     @classmethod
     def _decode_battery_mode(cls, battery_mode):
@@ -67,7 +80,7 @@ class X3HybridG4(Inverter):
             1: "Force Time Use",
             2: "Back Up Mode",
             3: "Feed-in Priority",
-        }.get(battery_mode)
+        }.get(battery_mode, f"unmapped value '{battery_mode}'")
 
     @classmethod
     def response_decoder(cls):

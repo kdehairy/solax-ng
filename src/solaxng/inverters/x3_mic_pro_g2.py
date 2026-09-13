@@ -45,7 +45,7 @@ class X3MicProG2(Inverter):
             3: "Fault",
             4: "Permanent Fault",
             5: "Update",
-        }.get(run_mode)
+        }.get(run_mode, f"unmapped value '{run_mode}'")
 
     @classmethod
     def response_decoder(cls):

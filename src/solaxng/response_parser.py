@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import sys
 from collections import namedtuple
 from typing import Any, Callable, Dict, Generator, Optional, Tuple, Union
@@ -125,7 +126,7 @@ class ResponseParser:
             InverterResponse: The decoded and mapped interver response.
         """
 
-        raw_json = resp.decode("utf-8").replace(",,", ",0.0,").replace(",,", ",0.0,")
+        raw_json = re.sub(r",(?=,)", ",0.0", resp.decode("utf-8"))
         json_response = {}
         for key, value in json.loads(raw_json).items():
             json_response[key.lower()] = value
