@@ -1,0 +1,713 @@
+Information depends on inverterType, which is contained in `Information[1]`:
+0
+1 - inverterType
+  apparently the same as in `type` field of the response body, at least in some cases
+  if transportType == 1 || inverterType >= 8
+    getPub2(Data) # See `Data2.txt` for contents details
+  else
+    getPub1(Data) # See `Data1.txt` for contents details
+2
+  if inverterType >= 8
+    inverterSerialNumber
+  else
+    ?
+3
+  if inverterType < 8
+    inverterSerialNumber
+  else
+    moduleType # WiFi/LAN dongle hardware/module type id, re-derived from SolaXCloud 7.7.1
+      known values 12, 18, 21, 25 and 27 flag a "cluster/parallel install capable" dongle in the app
+      (drives an internal UI flag only, doesn't change anything in `Data`/`Information` itself)
+4
+  if inverterType >= 8
+    dspVersion
+  else
+    ?
+5
+  if inverterType < 8
+    dspVersion
+  else
+    ?
+6
+  if inverterType >= 8
+    armVersion
+  else
+    ?
+7
+  if inverterType < 8
+    armVersion
+  else
+    ?
+8
+9 - transportType
+  if inverterType >= 8
+    transportType = 1
+  else
+    transportType = transportType
+10 - dongleModType
+11 - dongleWorkMode
+
+Derived flags per inverterType (re-derived from SolaXCloud 7.7.1's `invAdres`/flow-page helpers; these aren't fields
+in `Data`/`Information` themselves, they're how the official app decides what to show/hide for a given inverterType):
+
+hasBattery = ![4, 6, 7, 8, 16, 18, 22, 26, 41, 43, 44, 100, 101, 104, 105].includes(inverterType)
+  These types never have a battery, regardless of what `BatteryCapacity`/`BAT_Power`/etc. in `Data2.txt` decode to
+  (their template values are just left at 0). Don't rely on `BAT_Power == 0` alone to detect "no battery" - it's
+  ambiguous with "battery present but idle".
+
+hasPV = ![9, 41].includes(inverterType)
+  Types 9 (x1ac) and 41 (x1IESA) are pure AC-coupled/battery-only inverters with no PV/DC input at all.
+
+isPvOnly (battery not actually installed on this specific unit, even though the model supports one) only applies to
+inverterType in [19, 20, 21, 47]: read bit 0 of `InverterConfigStatus` (see `Data2.txt`, decoded via `hextobtye`) -
+if set, no battery is wired up on this particular installation. For every other inverterType this isn't checked;
+whatever `hasBattery` says above is assumed to always hold.
+
+isEps (EPS/backup mode active) is not simply `RunMode == 7` for `Data2.txt`-style (`getPub2`) inverters - the actual
+thresholds the app uses are:
+  inverterType in [64, 69]: isEps = RunMode == 5 || RunMode == 6
+  all other Data2.txt types: isEps = RunMode == 6 || RunMode == 7
+  (`Data1.txt`-style (`getPub1`) inverters, i.e. types 3, 4, 8: isEps = RunMode == 7, unchanged)
+Given how many operating-mode values each inverterType's `RunMode` table has grown to (TOU-x/R-n variants etc, see
+below), matching on a mode name containing "EPS" is not reliable - use these numeric thresholds instead.
+
+Generator input / third-party or AC-coupled-solar meter fields (`GenPower`, `GenEnergy`, `solarInverterPower`,
+`solarInverterEnergy`, `TotalThirdDevicePower`, `TotalThirdDeviceYield` in `Data2.txt`) are only ever populated by the
+app for inverterType in [19, 20, 21, 47, 64, 69] - for every other type these fields should be treated as not
+present/meaningless even if `Data2.txt`'s generic template happens to decode some value for them.
+
+workModes/RunMode per inverterType:
+(Re-derived from SolaXCloud 7.7.1; each numeric code below is the `RunMode`/`RunMode`-equivalent value
+decoded in `Data2.txt`. Groups that were previously believed to share a single table have been split up
+where 7.7.1 shows they actually differ, and all inverterType codes with local real-time data support are
+now covered.)
+3: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS Check Mode",
+  7: "EPS Mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+}
+4,6..8,16: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+}
+5: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "PV Wake-Up Battery Mode",
+  11: "Standby Mode",
+}
+9: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+}
+10..12: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Gen Check Mode",
+  11: "Gen Run Mode",
+  12: "RSD Standby",
+}
+13: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "Normal Mode(SS)",
+}
+14: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "Fault&Charging Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  26: "NormalMode(Gen)",
+  27: "Wait Charge Mode",
+  28: "Wait (Shutting Down)",
+  29: "NormalMode(SS)",
+  30: "Normal Mode (2030.5)",
+  31: "Normal Mode (WLV)",
+}
+15: {
+  0: "Waiting",
+  1: "Checking",
+  2: "Normal",
+  3: "Fault",
+  4: "Permanent Fault",
+  5: "Upgrade",
+  6: "EPS Waiting",
+  7: "EPS",
+  8: "Self Testing",
+  9: "Idle",
+  10: "Standby",
+  11: "Fault&Charging Mode",
+  20: "TOU (VPP)",
+  21: "TOU (Self-Use)",
+  22: "TOU (Charging)",
+  23: "TOU (Discharging)",
+  24: "TOU (Battery Off)",
+  25: "TOU (Peak Shaving)",
+  26: "NormalMode(Generator)",
+  27: "Wait Charge Mode",
+  28: "NormalMode(SS)",
+}
+17,102,103: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+}
+18,22,26: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS Check Mode",
+  7: "EPS Mode",
+}
+19..21: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS Check Mode",
+  7: "EPS Mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "Gen Check Mode",
+  12: "Gen Run Mode",
+  13: "RSD Standby",
+  20: "NormalMode(R)",
+  21: "Normal(TOU-S)",
+  22: "Normal(TOU-C)",
+  23: "Normal(TOU-D)",
+  24: "Normal(TOU-B)",
+  25: "Normal(TOU-P)",
+  26: "NormalMode(BAT-E)",
+  27: "NormalMode(BAT-H)",
+  28: "EPS mode(BAT-H)",
+  29: "NormalMode(R-1)",
+  30: "NormalMode(R-2)",
+  31: "NormalMode(R-3)",
+  32: "NormalMode(R-4)",
+  33: "NormalMode(R-5)",
+  34: "NormalMode(R-6)",
+  35: "NormalMode(R-7)",
+}
+23: {
+  0: "Waiting",
+  1: "Checking",
+  2: "Normal",
+  3: "Fault",
+  5: "Upgrade",
+  6: "EPS Waiting",
+  7: "EPS",
+  9: "Idle",
+  10: "Standby",
+  11: "Init Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  26: "NormalMode(Gen)",
+  27: "Wait Charge Mode",
+  29: "Normal(SS)",
+}
+24,35,39,40: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "Init Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  26: "Normal(VPP)",
+  31: "NormalMode(R-1)",
+  32: "NormalMode(R-2)",
+  33: "NormalMode(R-3)",
+  34: "NormalMode(R-4)",
+  35: "NormalMode(R-5)",
+  36: "NormalMode(R-6)",
+  37: "NormalMode(R-7)",
+  38: "NormalMode(R-8)",
+  39: "NormalMode(R-9)",
+  40: "NormalMode(R-10)",
+  41: "NormalMode(R-11)",
+  42: "NormalMode(R-12)",
+  43: "NormalMode(R-13)",
+  44: "NormalMode(R-14)",
+  45: "NormalMode(R-15)",
+}
+25,43: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Only PV Charge",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  26: "Normal(2030.5)",
+  33: "NormalMode(Gen)",
+  34: "Normal(Smart selfuse)",
+  35: "Normal(Smart feedin)",
+  36: "Normal(Smart Bat not discharge)",
+  37: "Normal(WLV 0%)",
+  40: "NormalMode(SS)",
+  41: "NormalMode(R-1)",
+  42: "NormalMode(R-2)",
+  43: "NormalMode(R-3)",
+  44: "NormalMode(R-4)",
+  45: "NormalMode(R-5)",
+  46: "NormalMode(R-6)",
+  47: "NormalMode(R-7)",
+  48: "NormalMode(R-8)",
+  49: "NormalMode(R-9)",
+  50: "NormalMode(R-10)",
+  51: "NormalMode(R-11)",
+  52: "NormalMode(R-12)",
+}
+31: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  14: "Fault Charge Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+}
+32: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS check mode",
+  7: "EPS mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  13: "Fault Charging Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  33: "Normal(Gen)",
+  34: "Normal(Smart selfuse)",
+  35: "Normal(Smart feedin)",
+  36: "Normal(Smart Bat not discharge)",
+  37: "Normal(WLV 0%)",
+  40: "NormalMode(SS)",
+  41: "NormalMode(R-1)",
+  42: "NormalMode(R-2)",
+  43: "NormalMode(R-3)",
+  44: "NormalMode(R-4)",
+  45: "NormalMode(R-5)",
+  46: "NormalMode(R-6)",
+  47: "NormalMode(R-7)",
+  48: "NormalMode(R-8)",
+  49: "NormalMode(R-9)",
+  50: "NormalMode(R-10)",
+  51: "NormalMode(R-11)",
+  52: "NormalMode(R-12)",
+  53: "NormalMode(R-13)",
+  54: "NormalMode(R-14)",
+  55: "NormalMode(R-15)",
+}
+33: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Update Mode",
+  5: "EPS check mode",
+  6: "EPS mode",
+  7: "GEN Check",
+  8: "GEN Mode",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "EPS Wait",
+  12: "Force Wakeup",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+}
+34: {
+  0: "Waiting",
+  1: "Checking",
+  2: "Normal",
+  3: "Fault",
+  5: "Upgrade",
+  6: "EPS Waiting",
+  7: "EPS",
+  9: "Idle",
+  10: "Standby",
+  11: "Init Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  26: "NormalMode(Generator)",
+  27: "Wait Charge Mode",
+}
+36,37: {
+  0: "J3ULT_errormsg.0",
+  1: "J3ULT_errormsg.1",
+  2: "J3ULT_errormsg.2",
+  3: "J3ULT_errormsg.3",
+  4: "J3ULT_errormsg.4",
+  5: "J3ULT_errormsg.5",
+  6: "J3ULT_errormsg.6",
+  7: "J3ULT_errormsg.7",
+  8: "J3ULT_errormsg.8",
+  9: "J3ULT_errormsg.9",
+  10: "J3ULT_errormsg.10",
+  20: "J3ULT_errormsg.20",
+  21: "J3ULT_errormsg.21",
+  22: "J3ULT_errormsg.22",
+  23: "J3ULT_errormsg.23",
+  24: "J3ULT_errormsg.24",
+  25: "J3ULT_errormsg.25",
+  34: "J3ULT_errormsg.34",
+  35: "J3ULT_errormsg.35",
+  36: "J3ULT_errormsg.36",
+}
+38: {
+  # NOTE: this product's app UI reuses its own internal translation-key table for the
+  # run mode (and, for J3ULT, doubles it up as the fault/status text); no confirmed English
+  # strings were found bundled in the APK, so the raw key (mode/error number) is listed below.
+  0: "J1ESSHB2.RUN0",
+  1: "J1ESSHB2.RUN1",
+  2: "J1ESSHB2.RUN2",
+  3: "J1ESSHB2.RUN3",
+  4: "J1ESSHB2.RUN4",
+  5: "J1ESSHB2.RUN5",
+  6: "J1ESSHB2.RUN6",
+  7: "J1ESSHB2.RUN7",
+  8: "J1ESSHB2.RUN8",
+  9: "J1ESSHB2.RUN9",
+  10: "J1ESSHB2.RUN10",
+  11: "J1ESSHB2.RUN11",
+  12: "J1ESSHB2.RUN12",
+  13: "J1ESSHB2.RUN13",
+  21: "J1ESSHB2.RUN21",
+  22: "J1ESSHB2.RUN22",
+  23: "J1ESSHB2.RUN23",
+  24: "J1ESSHB2.RUN24",
+  25: "J1ESSHB2.RUN25",
+}
+41: {
+  0: "Waiting",
+  1: "Checking",
+  2: "Normal",
+  3: "Fault",
+  5: "Upgrade",
+  6: "EPS Waiting",
+  7: "EPS",
+  9: "Idle",
+  10: "Standby",
+  11: "Init Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  29: "Normal(SS)",
+}
+44: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "Eps Check Mode",
+  9: "Eps Mode",
+}
+46: {
+  0: "Waiting",
+  1: "Checking",
+  2: "Normal",
+  3: "Fault",
+  5: "Upgrade",
+  6: "EPS Waiting",
+  7: "EPS",
+  9: "Idle",
+  10: "Standby",
+  11: "Init Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+}
+47: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS Check Mode",
+  7: "EPS Mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "Gen Check Mode",
+  12: "Gen Run Mode",
+  13: "RSD Standby",
+  14: "OFF Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  27: "NormalMode(BAT-H)",
+  28: "EPS mode(BAT-H)",
+}
+64,69: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Update Mode",
+  5: "EPS check mode",
+  6: "EPS Mode",
+  7: "GEN Check",
+  8: "GEN Mode",
+  9: "Idle Mode",
+  10: "Standby Mode",
+  11: "EPS Wait",
+  12: "Force Wakeup",
+}
+66: {
+  # NOTE: this product's app UI reuses its own internal translation-key table for the
+  # run mode (and, for J3ULT, doubles it up as the fault/status text); no confirmed English
+  # strings were found bundled in the APK, so the raw key (mode/error number) is listed below.
+  0: "X1SPT10K12K.RUN0",
+  1: "X1SPT10K12K.RUN1",
+  2: "X1SPT10K12K.RUN2",
+  3: "X1SPT10K12K.RUN3",
+  4: "X1SPT10K12K.RUN4",
+  5: "X1SPT10K12K.RUN5",
+  6: "X1SPT10K12K.RUN6",
+  7: "X1SPT10K12K.RUN7",
+  8: "X1SPT10K12K.RUN8",
+  9: "X1SPT10K12K.RUN9",
+  10: "X1SPT10K12K.RUN10",
+  11: "X1SPT10K12K.RUN11",
+  12: "X1SPT10K12K.RUN12",
+  13: "X1SPT10K12K.RUN13",
+  21: "X1SPT10K12K.RUN21",
+  22: "X1SPT10K12K.RUN22",
+  23: "X1SPT10K12K.RUN23",
+  24: "X1SPT10K12K.RUN24",
+  25: "X1SPT10K12K.RUN25",
+  26: "X1SPT10K12K.RUN26",
+}
+67: {
+  0: "Waiting",
+  1: "Checking",
+  2: "Normal",
+  3: "Fault",
+  5: "Upgrade",
+  6: "EPS Waiting",
+  7: "EPS",
+  9: "Idle",
+  10: "Standby",
+  11: "Init Mode",
+  20: "NormalMode(R)",
+  21: "NormalMode(TOU-S)",
+  22: "NormalMode(TOU-C)",
+  23: "NormalMode(TOU-D)",
+  24: "NormalMode(TOU-B)",
+  25: "NormalMode(TOU-P)",
+  26: "Normal(selfuse)",
+  27: "Normal(backup)",
+  28: "Normal(feedin)",
+  29: "Normal(peakshaving)",
+  30: "Normal(Manual-C)",
+  31: "Normal(Manual-D)",
+  32: "Normal(Manual-S)",
+  33: "Normal(Gen)",
+  34: "Normal(Smart selfuse)",
+  35: "Normal(Smart feedin)",
+  36: "Normal(Smart Bat not discharge)",
+  37: "Normal(WLV 0%)",
+  40: "NormalMode(SS)",
+  41: "NormalMode(R-1)",
+  42: "NormalMode(R-2)",
+  43: "NormalMode(R-3)",
+  44: "NormalMode(R-4)",
+  45: "NormalMode(R-5)",
+  46: "NormalMode(R-6)",
+  47: "NormalMode(R-7)",
+  48: "NormalMode(R-8)",
+  49: "NormalMode(R-9)",
+  50: "NormalMode(R-10)",
+  51: "NormalMode(R-11)",
+  52: "NormalMode(R-11)",
+  53: "NormalMode(R-13)",
+  54: "NormalMode(R-14)",
+  55: "NormalMode(R-15)",
+  56: "Normal (2030.5)",
+  57: "Normal(Aging)",
+  200: "Waiting(DRM)",
+  201: "Waiting(Lock)",
+  202: "Waiting(INV BTN)",
+  203: "Waiting(Shut)",
+  204: "Waiting(Sys OFF)",
+  205: "Waiting(Charge)",
+  206: "Waiting(Aging)",
+}
+100,101: {
+  0: "Init Mode",
+  1: "Idle Mode",
+  2: "Start Mode",
+  3: "Run Mode",
+  4: "Fault Mode",
+  5: "Update Mode",
+  6: "NormalMode(Generator)",
+}
+104,105: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Check Mode (Start)",
+  3: "Normal Mode",
+  4: "Fault Mode",
+  5: "Update Mode",
+  6: "Normal Mode (Generator)",
+}
+108,109: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  4: "Permanent Fault Mode",
+  5: "Update Mode",
+  6: "EPS Check Mode",
+  7: "EPS Mode",
+  8: "Self Test",
+  9: "Idle Mode",
+  10: "Standy Mode",
+}
+111: {
+  0: "Wait Mode",
+  1: "Check Mode",
+  2: "Normal Mode",
+  3: "Fault Mode",
+  5: "Update Mode",
+  9: "Idle Mode",
+  10: "Standby Mode",
+}
+
+102: {} (yes, empty in the app right now)
