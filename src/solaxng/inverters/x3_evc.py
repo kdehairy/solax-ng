@@ -10,7 +10,6 @@ from solaxng.utils import (
     div100,
     pack_u16,
     to_signed,
-    to_signed32,
     twoway_div10,
     twoway_div100,
 )
@@ -98,7 +97,7 @@ class X3EVC(Inverter):
             "Temperature Plug": (23, Units.C),
             "Temperature PCB": (24, Units.C),
             "CP State": (26, Units.NONE),
-            "Charging Duration": (pack_u16(80, 81), Units.NONE, to_signed32),
+            "Charging Duration": (pack_u16(80, 81), Units.NONE),
             "OCPP Offline Mode": (85, Units.NONE),
             "Type Power": (87, Units.NONE),
             "Type Phase": (88, Units.NONE),
