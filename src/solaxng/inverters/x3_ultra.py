@@ -91,7 +91,7 @@ class X3Ultra(Inverter):
             50: "R-14",
             51: "R-15",
             52: "R-16",
-        }.get(run_mode)
+        }.get(run_mode, f"unmapped value '{run_mode}'")
 
     @classmethod
     def response_decoder(cls):
