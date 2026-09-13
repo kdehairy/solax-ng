@@ -113,7 +113,7 @@ inverter/dongle needs one — an easy thing to forget, and without it discovery 
 inverter isn't supported):
 
 ```sh
-uv run python -m utils.discover_inverter --host <ip> --port <port> --pwd <password>
+uv run python -m utils.discover_inverter --raw --host <ip> --port <port> --pwd <password>
 ```
 
 If nothing matches, it writes a report (`--report path.md`, default `solax-unknown-model-*.md`)
@@ -125,9 +125,7 @@ can supply — what each raw value means, read off the inverter's own display or
   the serial numbers first) and we'll add it.
 * **Using an AI coding agent?** Point it at this repo and ask it to add support for your inverter.
   The workflow — run the tool above, ask you to fill in the sensor mapping, draft a plan, and
-  implement it once you approve — is written up as a portable
-  [`.agents` protocol](https://dotagentsprotocol.com/) skill at
-  [`.agents/skills/add-inverter-model/SKILL.md`](.agents/skills/add-inverter-model/SKILL.md).
+  implement it once you approve.
 * **Doing it by hand?** Follow
   ["Adding a new inverter"](AGENTS.md#adding-a-new-inverter) in `AGENTS.md`.
 
