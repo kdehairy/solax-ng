@@ -58,6 +58,19 @@ class X3HybridG4(Inverter):
             8: "Self Test",
             9: "Idle",
             10: "Standby",
+            11: "Fault&Charging Mode",
+            20: "TOU-R",
+            21: "TOU-S",
+            22: "TOU-C",
+            23: "TOU-E",
+            24: "TOU-G",
+            25: "TOU-SG",
+            26: "TOU-CG",
+            27: "TOU-EG",
+            28: "TOU-SG-CG",
+            29: "TOU-SG-EG",
+            30: "TOU-CG-EG",
+            31: "Gen",
         }.get(run_mode)
 
     @classmethod
