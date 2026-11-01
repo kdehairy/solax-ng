@@ -806,3 +806,21 @@ X1_HYBRID_G4_V_3_018_VALUES = {
     "Total feed-in energy": 41.20,
     "Total consumption": 13.2,
 }
+
+X1_BOOST_G4_V_1_006_VALUES = {
+    "AC Voltage": 234.5,
+    "AC Output Current": 1.1,
+    "AC Output Power": 225.0,
+    "PV1 Voltage": 152.1,
+    "PV2 Voltage": 151.8,
+    "PV1 Current": 0.8,
+    "PV2 Current": 0.7,
+    "PV1 Power": 125.0,
+    "PV2 Power": 109.0,
+    "AC Frequency": 49.97,
+    "Total Generated Energy": 1.9,
+    "Today's Generated Energy": 1.9,
+    "Exported Power": 0.0,
+    "Total Export Energy": 0.0,
+    "Total Import Energy": 0.0,
+}
