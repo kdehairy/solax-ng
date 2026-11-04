@@ -6,6 +6,7 @@ import pytest
 import solaxng.inverters as inverter
 from tests.samples.expected_values import (
     QVOLTHYBG33P_VALUES,
+    X1_BOOST_G4_V_1_006_VALUES,
     X1_BOOST_VALUES,
     X1_BOOST_VALUES_G4_V3,
     X1_BOOST_VALUES_OVERFLOWN,
@@ -35,6 +36,7 @@ from tests.samples.expected_values import (
 from tests.samples.responses import (
     QVOLTHYBG33P_RESPONSE_V34,
     X1_BOOST_AIR_MINI_RESPONSE,
+    X1_BOOST_G4_V_1_006_RESPONSE,
     X1_BOOST_RESPONSE,
     X1_BOOST_RESPONSE_G4_V3,
     X1_BOOST_RESPONSE_OVERFLOWN,
@@ -190,6 +192,16 @@ INVERTERS_UNDER_TEST = [
         values=X1_BOOST_VALUES_G4_V3,
         headers=X_FORWARDED_HEADER,
         data=None,
+    ),
+    InverterUnderTest(
+        uri="/",
+        method="POST",
+        query_string=None,
+        response=X1_BOOST_G4_V_1_006_RESPONSE,
+        inverter=inverter.X1G4Series,
+        values=X1_BOOST_G4_V_1_006_VALUES,
+        headers=None,
+        data="optType=ReadRealTimeData",
     ),
     InverterUnderTest(
         uri="/",

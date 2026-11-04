@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 
-from solaxng.endpoints import POST_BODY_XFF, POST_QUERY_XFF
+from solaxng.endpoints import POST_BODY, POST_BODY_XFF, POST_QUERY_XFF
 from solaxng.inverter import Inverter
 from solaxng.units import DailyTotal, Total, Units
 from solaxng.utils import div10, div100, pack_u16, to_signed
@@ -10,15 +10,25 @@ from solaxng.utils import div10, div100, pack_u16, to_signed
 
 class X1G4Series(Inverter):
     """
+    X1-Boost and X1-Mini, generation 4: inverterType 18 and 22, 'x1boostminig4' in
+    docs/reverse-engineered/README.md.
+
     Tested with
     X1-Boost gen 4 with Pocket WiFi 3.009.03
     and
     X1-Mini gen 4 WIFI+LAN 1.001.20
+    and
+    X1-Boost gen 4 (3.6kW) with 1.006.01, which reports 300 values rather than 100
+
+    Both payload widths decode with the same offsets -- see the '18,22:' block of
+    docs/reverse-engineered/Data2.txt. Newer firmware can also answer only when the
+    parameters are sent in the request body; with them in the query string it replies
+    '{"code": 3, "data": null}'.
 
     Includes X-Forwarded-For for direct LAN API access
     """
 
-    endpoints = (POST_QUERY_XFF, POST_BODY_XFF)
+    endpoints = (POST_QUERY_XFF, POST_BODY_XFF, POST_BODY)
 
     @classmethod
     def friendly_name(cls) -> str:
@@ -33,7 +43,13 @@ class X1G4Series(Inverter):
             ): str,
             vol.Required("ver"): str,
             vol.Required("data"): vol.Schema(
-                vol.All([vol.Coerce(float)], vol.Length(min=100, max=100))
+                vol.All(
+                    [vol.Coerce(float)],
+                    vol.Any(
+                        vol.Length(min=100, max=100),
+                        vol.Length(min=300, max=300),
+                    ),
+                )
             ),
             vol.Required("information"): vol.Schema(
                 vol.All(vol.Length(min=10, max=10))

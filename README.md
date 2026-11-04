@@ -82,7 +82,7 @@ These inverters have been tested and confirmed to be working. If your inverter i
 * QVOLTHYBG33P (QVOLTHYBG33P)
 * X1
 * X1 Boost
-* X1 G4 Series
+* X1 G4 Series (X1-Boost and X1-Mini, generation 4)
 * X1 Hybrid Gen4
 * X1 Mini
 * X1 Mini v34
